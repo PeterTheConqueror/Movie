@@ -1,14 +1,17 @@
+/**
+ *
+ **/
 class TriTextureSGNode extends SGNode {
-  constructor(image1, repeat1, image2, repeat2, alphaimage, alpharepeat, children ) {
-      super(children);
-      this.images = [image1, image2, alphaimage];
-      this.repeats = [repeat1, repeat2, alpharepeat];
-      this.textureunits = [0, 1, 2];
-      this.texCoords = ['a_texCoord1', 'a_texCoord2', 'a_alphatexCoord'];
-      this.texCoordLocs = [];
-      this.texCoordBuffers = [];
-      this.uniforms = ['u_texture1', 'u_texture2','u_alphatexture'];
-      this.textureIds = null;
+  constructor(image1, repeat1, image2, repeat2, alphaimage, alpharepeat, children) {
+    super(children);
+    this.images = [image1, image2, alphaimage];
+    this.repeats = [repeat1, repeat2, alpharepeat];
+    this.textureunits = [0, 1, 2];
+    this.texCoords = ['a_texCoord1', 'a_texCoord2', 'a_alphatexCoord'];
+    this.texCoordLocs = [];
+    this.texCoordBuffers = [];
+    this.uniforms = ['u_texture1', 'u_texture2', 'u_alphatexture'];
+    this.textureIds = null;
   }
 
   init(context) {
@@ -24,7 +27,7 @@ class TriTextureSGNode extends SGNode {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this.wrapS || gl.REPEAT);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this.wrapT || gl.REPEAT);
 
-      if(i < 2){
+      if (i < 2) {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.images[i]);
       } else {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.ALPHA, gl.ALPHA, gl.UNSIGNED_BYTE, this.images[i]);
@@ -34,7 +37,7 @@ class TriTextureSGNode extends SGNode {
 
       this.texCoordBuffers = this.texCoordBuffers.concat(gl.createBuffer());
       gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuffers[i]);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0,  this.repeats[i], 0,  this.repeats[i], this.repeats[i],  0, this.repeats[i]]), gl.STATIC_DRAW);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, this.repeats[i], 0, this.repeats[i], this.repeats[i], 0, this.repeats[i]]), gl.STATIC_DRAW);
       this.texCoordLocs = this.texCoordLocs.concat(gl.getAttribLocation(context.shader, this.texCoords[i]));
     }
   }
@@ -71,7 +74,7 @@ class TriTextureSGNode extends SGNode {
 
 class SetUniformsSGNode extends SetUniformSGNode {
   constructor(uniforms, values, children) {
-    if(uniforms.constructor.name !== 'Array' || values.constructor.name !== 'Array' || uniforms.length != values.length)
+    if (uniforms.constructor.name !== 'Array' || values.constructor.name !== 'Array' || uniforms.length != values.length)
       throw "Illegal Arguments for SetUniformsSGNode";
     super(uniforms[0], values[0], uniforms.length > 1 ? new SetUniformsSGNode(uniforms.splice(0, 1), values.splice(0, 1), children) : children);
   }
@@ -79,18 +82,16 @@ class SetUniformsSGNode extends SetUniformSGNode {
 
 class SkyboxSGNode extends SGNode {
 
-  constructor(cubetexture, textureunit, children ) {
-      super(children);
-      this.cubetexture = cubetexture;
-      this.textureunit = textureunit;
+  constructor(cubetexture, textureunit, children) {
+    super(children);
+    this.cubetexture = cubetexture;
+    this.textureunit = textureunit;
   }
 
-  render(context)
-  {
-    let invViewRed = mat3.fromMat4(mat3.create(), context.invViewMatrix);
-    gl.uniformMatrix3fv(gl.getUniformLocation(context.shader, 'u_invView'), false, invViewRed);
+  render(context) {
+    var invView3x3 = mat3.fromMat4(mat3.create(), context.invViewMatrix);
+    gl.uniformMatrix3fv(gl.getUniformLocation(context.shader, 'u_invView'), false, invView3x3);
     gl.uniform1i(gl.getUniformLocation(context.shader, 'u_texCube'), this.textureunit);
-    gl.uniform1i(gl.getUniformLocation(context.shader, 'u_useReflection'), this.doReflect)
 
     //activate and bind texture
     gl.activeTexture(gl.TEXTURE0 + this.textureunit);

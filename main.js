@@ -1,5 +1,9 @@
 //the OpenGL context
 'use strict';
+
+const width = 16;
+const height = 16;
+
 var gl = null;
 
 var root = null;
@@ -7,71 +11,67 @@ var scenes = null;
 
 const camera = {
   noclip : false,
-  baseposition : vec3.fromValues(0,-7,4),
+  baseposition : vec3.fromValues(0,1,4),
   addposition : vec3.fromValues(0,0,0),
-  // baseposition : {
-  //   x : 0,
-  //   y : -7,
-  //   z : 4
-  // },
-  // addposition : {
-  //   x : 0,
-  //   y : 0,
-  //   z : 0
-  // },
-  baserotation : {
-    x : 0,
-    y : 0,
-    z : 0
-  },
-  addrotation : {
-    x : 0,
-    y : 0,
-    z : 0
-  },
+  baserotation : vec3.fromValues(0,0,0),
+  addrotation : vec3.fromValues(0,0,0),
   move : function(x, z){
-    let dir = camera.getDirVec();
-    let xdir = vec3.scale(vec3.create(), dir, z);
+    var dir = camera.getDirVec();
+    var xdir = vec3.scale(vec3.create(), dir, z);
 
-    let zdir = vec3.rotateY(vec3.create(), dir, vec3.create(), Math.PI / 2);
+    var zdir = vec3.rotateY(vec3.create(), dir, vec3.create(), Math.PI / 2);
+    zdir[1] = 0;
+    vec3.normalize(zdir, zdir);
     vec3.scale(zdir, zdir, x);
 
     vec3.add(camera.addposition, camera.addposition, xdir);
     vec3.add(camera.addposition, camera.addposition, zdir);
+
+    camera.limitPosition();
   },
   getDirVec : function(){
-    let dir = vec3.fromValues(0, 0, -1);
-    vec3.rotateX(dir, dir, vec3.create(), camera.getXRad());
-    vec3.rotateY(dir, dir, vec3.create(), camera.getYRad());
-    vec3.rotateZ(dir, dir, vec3.create(), camera.getZRad());
+    var dir = vec3.fromValues(0, 0, 1);
+    var rad = camera.getRadians();
+    vec3.rotateX(dir, dir, vec3.create(), rad[0]);
+    vec3.rotateY(dir, dir, vec3.create(), rad[1]);
+    vec3.rotateZ(dir, dir, vec3.create(), rad[2]);
     vec3.normalize(dir, dir);
     return dir;
   },
-  getXRad : function(){
-    return (camera.baserotation.x + camera.addrotation.x) * Math.PI / 180;
+  getRadians : function(){
+    var rad = [];
+    var rotation = camera.getRotation();
+    for (var i = 0; i < 3; i++) {
+      rad[i] = camera.convertToRad(rotation[i]);
+    }
+    return rad;
   },
-  getYRad : function(){
-    return (camera.baserotation.y + camera.addrotation.y) * Math.PI / 180;;
+  convertToRad : function(rotation){
+    return rotation * Math.PI / 180;
   },
-  getZRad : function(){
-    return (camera.baserotation.z + camera.addrotation.z) * Math.PI / 180;
+  limitPosition : function(){
+    var pos = camera.getPosition();
+    if(pos[1] < 1){
+      pos[1] += (1-pos[1]);
+    }
+    var len = vec3.length(pos);
+    if(len > 14)
+    {
+      vec3.scale(pos, pos, 14 / len);
+    }
+    vec3.subtract(camera.addposition, pos, camera.baseposition);
   },
-  getXDir : function(){
-    return 2 * Math.sin(camera.getXRad());
+  getPosition : function(){
+    return vec3.add(vec3.create(), camera.baseposition, camera.addposition);
   },
-  getYDir : function(){
-    return 2 * Math.sin(camera.getYRad());
-  },
-  getZDir : function(){
-    return 2 * Math.sin(camera.getZRad());
+  getRotation : function(){
+    return vec3.add(vec3.create(), camera.baserotation, camera.addrotation);
   },
   resetPosition : function(){
     camera.addposition = vec3.fromValues(0,0,0);
   },
   resetRotation : function(){
-    camera.addrotation.x = 0;
-    camera.addrotation.y = 0;
-    camera.addrotation.z = 0;
+    camera.addrotation = vec3.fromValues(0,0,0);
   },
   reset : function(){
     camera.resetPosition();
@@ -94,7 +94,7 @@ function init(resources) {
 function render(timeInMilliseconds) {
   // checkForWindowResize(gl);
 
-  gl.clearColor(0.5, 0.5, 0.5, 1.0);
+  gl.clearColor(0, 0, 0, 1.0);
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -102,7 +102,7 @@ function render(timeInMilliseconds) {
 
   const context = createSGContext(gl);
 
-  context.projectionMatrix = mat4.perspective(mat4.create(), Math.PI/6, gl.drawingBufferWidth / gl.drawingBufferHeight, .1, 100);
+  context.projectionMatrix = mat4.perspective(mat4.create(), Math.PI * 30 /180, gl.drawingBufferWidth / gl.drawingBufferHeight, .1, 100);
   var eye = vec3.add(vec3.create(), camera.baseposition, camera.addposition);
   context.viewMatrix = mat4.lookAt(mat4.create(),
   eye, vec3.add(vec3.create(), eye, camera.getDirVec()), [0,1,0]);
@@ -110,12 +110,12 @@ function render(timeInMilliseconds) {
 
   context.sceneMatrix = mat4.identity(mat4.create());
 
-  root.render(context);
-
-  var scene = Math.floor(timeInMilliseconds / 10000);
-  if(scenes[scene]){
-    scenes[scene].render(context);
+  var scene = Math.floor(timeInMilliseconds / 1000);
+  //var scene = Math.floor(timeInMilliseconds / 10000);
+  if(scenes[scene % scenes.length]){
+    scenes[scene % scenes.length].render(context);
   }
+  root.render(context);
 
   requestAnimationFrame(render);
 }
@@ -130,12 +130,15 @@ loadResources({
   sb_fs: 'shader/skybox.fs.glsl',
   mod_vs: 'shader/model.vs.glsl',
   mod_fs: 'shader/model.fs.glsl',
+  wt_vs: 'shader/water.vs.glsl',
+  wt_fs: 'shader/water.fs.glsl',
 
+  water: 'textures/black_water.jpg',
   tex1: 'textures/tex1.jpg',
   tex2: 'textures/tex2.jpg',
   tex3: 'textures/tex3.jpg',
   wave: 'textures/wave.jpg',
-  alphamask: 'textures/alphamask_alt2.png',
+  alphamask: 'textures/alphamask.png',
 
   plane: 'models/plane.obj',
 
@@ -168,34 +171,16 @@ loadResources({
 
 function createSceneGraph(gl, resources) {
 
-  const root = new SGNode();
+  const root = new TransformationSGNode(glm.transform({ translate:[0, 0, 0]}));
 
   {
-    var width = 16;
-    var height = 16;
-    let floor = new MaterialSGNode(
-                new TriTextureSGNode(resources.tex1, 512, resources.tex2, 256, resources.alphamask, 128,
-                new RenderSGNode({
-                  position: [-width, -height, 0,   width, -height, 0,   width, height, 0,   -width, height, 0],
-                  normal: [0, 0, 1,   0, 0, 1,   0, 0, 1,   0, 0, 1],
-                  index: [0, 1, 2,   2, 3, 0]
-                })));
-
-    floor.ambient = [0, 0, 0, 1];
-    floor.diffuse = [0.15, 0.15, 0.15, 1];
-    floor.specular = [0.62, 0.62, 0.62, 1];
-    floor.shininess = 50.0;
-
-    root.append(new ShaderSGNode(createProgram(gl, resources.mt_vs, resources.mt_fs),
-      new TransformationSGNode(glm.transform({ translate:[0, -8, 0], rotateX: 90, scale: 1}), [floor])
-    ));
   }
 
-  {
-    // root.append(new ShaderSGNode(createProgram(gl, resources.mod_vs, resources.mod_fs),
-    //   new TransformationSGNode(glm.transform({ translate: [0, 0.5, 0], rotateX : 90, scale: 0.3 }),  [new RenderSGNode(resources.plane)])
-    // ));
-  }
+  // {
+  //   root.append(new ShaderSGNode(createProgram(gl, resources.mod_vs, resources.mod_fs),
+  //     new TransformationSGNode(glm.transform({ translate: [0, 0.5, 0], rotateX : 90, scale: 0.3 }),  [new RenderSGNode(resources.plane)])
+  //   ));
+  // }
 
   return root;
 }
@@ -204,35 +189,86 @@ function createScenes(gl, resources){
 
   const scenes = [];
 
-  scenes[0] = new SGNode(new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
-  new SkyboxSGNode(initSceneCube({
-    env_r : resources.scene0_env_r,
-    env_l : resources.scene0_env_l,
-    env_d : resources.scene0_env_d,
-    env_u : resources.scene0_env_u,
-    env_f : resources.scene0_env_f,
-    env_b : resources.scene0_env_b
-  }, 3), 3, new RenderSGNode(makeSphere(16)))));
+  for (var i = 0; i < 3; i++) {
+    scenes[i] = new SGNode();
+  }
 
-  scenes[1] = new SGNode(new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
-  new SkyboxSGNode(initSceneCube({
-    env_r : resources.scene1_env_r,
-    env_l : resources.scene1_env_l,
-    env_d : resources.scene1_env_d,
-    env_u : resources.scene1_env_u,
-    env_f : resources.scene1_env_f,
-    env_b : resources.scene1_env_b
-  }, 3), 3, new RenderSGNode(makeSphere(16)))));
+  {
+    let floor = new MaterialSGNode(
+      new TriTextureSGNode(resources.tex1, 512, resources.tex2, 256, resources.alphamask, 32,
+        new RenderSGNode({
+          position: [-width, -height, 0,   width, -height, 0,   width, height, 0,   -width, height, 0],
+          normal: [0, 0, 1,   0, 0, 1,   0, 0, 1,   0, 0, 1],
+          index: [0, 1, 2,   2, 3, 0]
+        })
+      )
+    );
 
-  scenes[2] = new SGNode(new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
-  new SkyboxSGNode(initSceneCube({
-    env_r : resources.scene2_env_r,
-    env_l : resources.scene2_env_l,
-    env_d : resources.scene2_env_d,
-    env_u : resources.scene2_env_u,
-    env_f : resources.scene2_env_f,
-    env_b : resources.scene2_env_b
-  }, 3), 3, new RenderSGNode(makeSphere(16)))));
+    floor.ambient = [0, 0, 0, 1];
+    floor.diffuse = [0.15, 0.15, 0.15, 1];
+    floor.specular = [0.62, 0.62, 0.62, 1];
+    floor.shininess = 50.0;
+
+    let floorShader = new ShaderSGNode(createProgram(gl, resources.mt_vs, resources.mt_fs),
+    new TransformationSGNode(glm.transform({ rotateX: 90}), floor));
+
+    let texUnit = 3;
+    {
+      let skybox = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
+      new SkyboxSGNode(initSceneCube({
+        env_r : resources.scene0_env_r,
+        env_l : resources.scene0_env_l,
+        env_d : resources.scene0_env_d,
+        env_u : resources.scene0_env_u,
+        env_f : resources.scene0_env_f,
+        env_b : resources.scene0_env_b
+      }, texUnit), texUnit, new RenderSGNode(makeSphere(16, 20, 90))));
+
+      scenes[0].append(skybox);
+
+      scenes[0].append(floorShader);
+    }
+
+    {
+      let skybox = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
+      new SkyboxSGNode(initSceneCube({
+        env_r : resources.scene1_env_r,
+        env_l : resources.scene1_env_l,
+        env_d : resources.scene1_env_d,
+        env_u : resources.scene1_env_u,
+        env_f : resources.scene1_env_f,
+        env_b : resources.scene1_env_b
+      }, texUnit), texUnit, new RenderSGNode(makeSphere(16, 20, 90))));
+
+      scenes[1].append(skybox);
+
+      scenes[1].append(floorShader);
+    }
+
+    {
+      let sceneCube = initSceneCube({
+        env_r : resources.scene2_env_r,
+        env_l : resources.scene2_env_l,
+        env_d : resources.scene2_env_d,
+        env_u : resources.scene2_env_u,
+        env_f : resources.scene2_env_f,
+        env_b : resources.scene2_env_b
+      }, texUnit);
+
+      let skybox = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
+      new SkyboxSGNode(sceneCube, texUnit, new RenderSGNode(makeSphere(16, 20, 90))));
+
+      scenes[2].append(skybox);
+
+      scenes[2].append(new ShaderSGNode(createProgram(gl, resources.wt_vs, resources.wt_fs),
+      new TransformationSGNode(glm.transform({ rotateX: 90 }),
+      new SkyboxSGNode(sceneCube, texUnit, new RenderSGNode({
+        position: [-width, -height, 0,   width, -height, 0,   width, height, 0,   -width, height, 0],
+        normal: [0, 0, 1,   0, 0, 1,   0, 0, 1,   0, 0, 1],
+        index: [0, 1, 2,   2, 3, 0]
+      })))));
+    }
+  }
 
   return scenes;
 }
@@ -261,8 +297,8 @@ function initInteraction(canvas) {
     const pos = toPos(event);
     const delta = { yaw : mouse.pos.x - pos.x, pitch : mouse.pos.y - pos.y };
     if (mouse.leftButtonDown) {
-  		camera.addrotation.x = (camera.addrotation.x  + delta.yaw/16)%360;
-  		camera.addrotation.z = limitDeg(camera.addrotation.z  + delta.pitch/16, 90);
+      camera.addrotation[0] = (camera.addrotation[0]  + delta.yaw/16)%360;
+      camera.addrotation[2] = limitDeg(camera.addrotation[2]  + delta.pitch/16, 90);
     }
     mouse.pos = pos;
   });
