@@ -250,8 +250,8 @@ function initInteraction(canvas) {
       y: event.clientY - rect.top
     };
   }
-  function limitDeg(deg){
-    return Math.min(Math.max(deg, -90), 90);
+  function limitDeg(deg = 0, limit = 90){
+    return Math.min(Math.max(deg, -limit), limit);
   }
   canvas.addEventListener('mousedown', function(event) {
     mouse.pos = toPos(event);
@@ -259,10 +259,10 @@ function initInteraction(canvas) {
   });
   canvas.addEventListener('mousemove', function(event) {
     const pos = toPos(event);
-    const delta = { z : mouse.pos.x - pos.x, x: mouse.pos.y - pos.y };
+    const delta = { yaw : mouse.pos.x - pos.x, pitch : mouse.pos.y - pos.y };
     if (mouse.leftButtonDown) {
-  		camera.addrotation.x = limitDeg(camera.addrotation.x  + delta.x/16);
-  		camera.addrotation.z = limitDeg(camera.addrotation.z  + delta.z/16);
+  		camera.addrotation.x = (camera.addrotation.x  + delta.yaw/16)%360;
+  		camera.addrotation.z = limitDeg(camera.addrotation.z  + delta.pitch/16, 90);
     }
     mouse.pos = pos;
   });
