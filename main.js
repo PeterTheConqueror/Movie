@@ -3,24 +3,26 @@
 var gl = null;
 
 var root = null;
-var surroundings = null;
+var scenes = null;
 
 const camera = {
   noclip : false,
-  baseposition : {
-    x : 0,
-    y : 1,
-    z : 4
-  },
-  addposition : {
-    x : 0,
-    y : 0,
-    z : 0
-  },
+  baseposition : vec3.fromValues(0,-7,4),
+  addposition : vec3.fromValues(0,0,0),
+  // baseposition : {
+  //   x : 0,
+  //   y : -7,
+  //   z : 4
+  // },
+  // addposition : {
+  //   x : 0,
+  //   y : 0,
+  //   z : 0
+  // },
   baserotation : {
     x : 0,
     y : 0,
-    z : -33
+    z : 0
   },
   addrotation : {
     x : 0,
@@ -28,9 +30,22 @@ const camera = {
     z : 0
   },
   move : function(x, z){
+    let dir = camera.getDirVec();
+    let xdir = vec3.scale(vec3.create(), dir, z);
 
-    camera.addposition.x += camera.getXDir() * x;
-    camera.addposition.y += camera.getYDir() * y;
+    let zdir = vec3.rotateY(vec3.create(), dir, vec3.create(), Math.PI / 2);
+    vec3.scale(zdir, zdir, x);
+
+    vec3.add(camera.addposition, camera.addposition, xdir);
+    vec3.add(camera.addposition, camera.addposition, zdir);
+  },
+  getDirVec : function(){
+    let dir = vec3.fromValues(0, 0, -1);
+    vec3.rotateX(dir, dir, vec3.create(), camera.getXRad());
+    vec3.rotateY(dir, dir, vec3.create(), camera.getYRad());
+    vec3.rotateZ(dir, dir, vec3.create(), camera.getZRad());
+    vec3.normalize(dir, dir);
+    return dir;
   },
   getXRad : function(){
     return (camera.baserotation.x + camera.addrotation.x) * Math.PI / 180;
@@ -51,9 +66,7 @@ const camera = {
     return 2 * Math.sin(camera.getZRad());
   },
   resetPosition : function(){
-    camera.addposition.x = 0;
-    camera.addposition.y = 0;
-    camera.addposition.z = 0;
+    camera.addposition = vec3.fromValues(0,0,0);
   },
   resetRotation : function(){
     camera.addrotation.x = 0;
@@ -73,7 +86,7 @@ function init(resources) {
 
   root = createSceneGraph(gl, resources);
 
-  surroundings = createSurroundings(gl, resources);
+  scenes = createScenes(gl, resources);
 
   initInteraction(gl.canvas);
 }
@@ -90,10 +103,9 @@ function render(timeInMilliseconds) {
   const context = createSGContext(gl);
 
   context.projectionMatrix = mat4.perspective(mat4.create(), Math.PI/6, gl.drawingBufferWidth / gl.drawingBufferHeight, .1, 100);
-  var eye = [camera.baseposition.x + camera.addposition.x, camera.baseposition.y + camera.addposition.y, camera.baseposition.z + camera.addposition.z];
+  var eye = vec3.add(vec3.create(), camera.baseposition, camera.addposition);
   context.viewMatrix = mat4.lookAt(mat4.create(),
-  eye,
-  [eye[0] + camera.getXDir(), eye[1], eye[2] + camera.getZDir()], [0,1,0]);
+  eye, vec3.add(vec3.create(), eye, camera.getDirVec()), [0,1,0]);
   context.invViewMatrix = mat4.invert(mat4.create(), context.viewMatrix);
 
   context.sceneMatrix = mat4.identity(mat4.create());
@@ -101,8 +113,8 @@ function render(timeInMilliseconds) {
   root.render(context);
 
   var scene = Math.floor(timeInMilliseconds / 10000);
-  if(surroundings[scene]){
-    surroundings[scene].render(context);
+  if(scenes[scene]){
+    scenes[scene].render(context);
   }
 
   requestAnimationFrame(render);
@@ -170,29 +182,29 @@ function createSceneGraph(gl, resources) {
                 })));
 
     floor.ambient = [0, 0, 0, 1];
-    floor.diffuse = [0.1, 0.1, 0.1, 1];
-    floor.specular = [0.5, 0.5, 0.5, 1];
+    floor.diffuse = [0.15, 0.15, 0.15, 1];
+    floor.specular = [0.62, 0.62, 0.62, 1];
     floor.shininess = 50.0;
 
     root.append(new ShaderSGNode(createProgram(gl, resources.mt_vs, resources.mt_fs),
-      new TransformationSGNode(glm.transform({ rotateX: 90, scale: 1}), [floor])
+      new TransformationSGNode(glm.transform({ translate:[0, -8, 0], rotateX: 90, scale: 1}), [floor])
     ));
   }
 
   {
-    root.append(new ShaderSGNode(createProgram(gl, resources.mod_vs, resources.mod_fs),
-      new TransformationSGNode(glm.transform({ translate: [0, 0.5, 0], rotateX : 90, scale: 0.3 }),  [new RenderSGNode(resources.plane)])
-    ));
+    // root.append(new ShaderSGNode(createProgram(gl, resources.mod_vs, resources.mod_fs),
+    //   new TransformationSGNode(glm.transform({ translate: [0, 0.5, 0], rotateX : 90, scale: 0.3 }),  [new RenderSGNode(resources.plane)])
+    // ));
   }
 
   return root;
 }
 
-function createSurroundings(gl, resources){
+function createScenes(gl, resources){
 
-  const surroundings = [];
+  const scenes = [];
 
-  surroundings[0] = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
+  scenes[0] = new SGNode(new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
   new SkyboxSGNode(initSceneCube({
     env_r : resources.scene0_env_r,
     env_l : resources.scene0_env_l,
@@ -200,9 +212,9 @@ function createSurroundings(gl, resources){
     env_u : resources.scene0_env_u,
     env_f : resources.scene0_env_f,
     env_b : resources.scene0_env_b
-  }, 3), 3, new RenderSGNode(makeSphere(10))));
+  }, 3), 3, new RenderSGNode(makeSphere(16)))));
 
-  surroundings[1] = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
+  scenes[1] = new SGNode(new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
   new SkyboxSGNode(initSceneCube({
     env_r : resources.scene1_env_r,
     env_l : resources.scene1_env_l,
@@ -210,9 +222,9 @@ function createSurroundings(gl, resources){
     env_u : resources.scene1_env_u,
     env_f : resources.scene1_env_f,
     env_b : resources.scene1_env_b
-  }, 3), 3, new RenderSGNode(makeSphere(10))));
+  }, 3), 3, new RenderSGNode(makeSphere(16)))));
 
-  surroundings[2] = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
+  scenes[2] = new SGNode(new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
   new SkyboxSGNode(initSceneCube({
     env_r : resources.scene2_env_r,
     env_l : resources.scene2_env_l,
@@ -220,9 +232,9 @@ function createSurroundings(gl, resources){
     env_u : resources.scene2_env_u,
     env_f : resources.scene2_env_f,
     env_b : resources.scene2_env_b
-  }, 3), 3, new RenderSGNode(makeSphere(10))));
+  }, 3), 3, new RenderSGNode(makeSphere(16)))));
 
-  return surroundings;
+  return scenes;
 }
 
 function initInteraction(canvas) {
@@ -247,7 +259,7 @@ function initInteraction(canvas) {
   });
   canvas.addEventListener('mousemove', function(event) {
     const pos = toPos(event);
-    const delta = { x : mouse.pos.x - pos.x, z: mouse.pos.y - pos.y };
+    const delta = { z : mouse.pos.x - pos.x, x: mouse.pos.y - pos.y };
     if (mouse.leftButtonDown) {
   		camera.addrotation.x = limitDeg(camera.addrotation.x  + delta.x/16);
   		camera.addrotation.z = limitDeg(camera.addrotation.z  + delta.z/16);
@@ -272,10 +284,10 @@ function initInteraction(canvas) {
   document.addEventListener('keydown', function(event) {
     if(camera.noclip){
       if (event.code === 'KeyW') {
-        camera.move(0, -0.1);
+        camera.move(0, 0.1);
         //camera.addposition.z-=.1;
       } else if (event.code === 'KeyS') {
-        camera.move(0, 0.1);
+        camera.move(0, -0.1);
         //camera.addposition.z+=.1;
       } else if (event.code === 'KeyA') {
         camera.move(0.1, 0);
