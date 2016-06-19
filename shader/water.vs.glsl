@@ -29,9 +29,9 @@ varying vec3 v_cameraRayVec;
 varying vec3 v_normalVec;
 
 void main() {
-  //v_angle = 500.0 * (a_position.x + a_position.z) - u_shift;
-  v_angle = 100.0 * (-a_position.x + a_position.y) - u_shift;
-  v_height = (sin(v_angle) + 1.0)/2.0;
+  v_angle = (a_position.x + a_position.y)/100.0 - u_shift;
+
+  v_height = (sin(v_angle) + 1.0)/5.0;
 
   vec3 position = a_position;
 

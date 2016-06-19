@@ -62,11 +62,14 @@ void main() {
 	vec3 normalVec = normalize(v_normalVec);
 	vec3 cameraRayVec = normalize(v_cameraRayVec);
 	//
+	normalVec = vec3(normalVec.x, normalVec.y * cos(v_angle) - normalVec.z * sin(v_angle), normalVec.y * sin(v_angle) + normalVec.z * cos(v_angle));
+	normalVec = normalize(normalVec);
+
 	vec3 texCoords  = reflect(cameraRayVec, normalVec);
 	//gl_FragColor = vec4(textureCube(u_texCube, texCoords).xyz * v_height, 1.0);
 	//gl_FragColor = vec4(0.3,0.3, 0.8, 1);
-	//gl_FragColor =  textureCube(u_texCube, texCoords);
-	gl_FragColor = vec4(v_height, v_height, v_height, 1);
+	gl_FragColor =  textureCube(u_texCube, texCoords);
+	//gl_FragColor = vec4(normalVec, 1);
 	//gl_FragColor = vec4(v_height/2.0, v_height/2.0, v_height/2.0, 1);
 	//float col = v_angle/100.0 - float(int(v_angle)/100)+0.5;
 	//gl_FragColor = vec4(col, col, col, 1);

@@ -65,7 +65,7 @@ function render(timeInMilliseconds) {
 
   context.sceneMatrix = mat4.identity(mat4.create());
 
-  context.shift = (timeInMilliseconds/600);
+  context.shift = (timeInMilliseconds/6000);
 
   var scene;
   scene = 0;
