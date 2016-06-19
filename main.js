@@ -3,6 +3,8 @@
 
 var camera;
 
+var scene;
+
 const width = 48;
 const height = 48;
 
@@ -67,11 +69,8 @@ function render(timeInMilliseconds) {
 
   context.shift = (timeInMilliseconds/6000);
 
-  var scene;
-  scene = 0;
-  //scene = Math.floor(timeInMilliseconds / 1000);
-  //scene = Math.floor(timeInMilliseconds / 2000);
-  //scene = Math.floor(timeInMilliseconds / 10000);
+  calcScene(timeInMilliseconds);
+  
   if(scenes[scene % scenes.length]){
     scenes[scene % scenes.length].render(context);
   }
@@ -80,6 +79,128 @@ function render(timeInMilliseconds) {
   planeroot.render(context);
 
   requestAnimationFrame(render);
+}
+
+function LIGHTNING(){
+
+  gl.drawArrays(gl.TRIANGLES, 0, 6);
+}
+
+function calcScene(time) {
+  //scene = 2;
+  scene = Math.floor(time / 1000);
+  //scene = Math.floor(time / 5000);
+  //scene = Math.floor(time / 10000);
+  return scene;
+}
+function createLights(gl, resources) {
+
+  const lights = [];
+
+  lights[0] = new Light([-4, 7, -4], [0, 0, 0, 1], [1, 1, 1, 1], [1, 1, 1, 1]);
+  lights[1] = new Light([4, 7, -4], [0, 0, 0, 1], [1, 1, 1, 1], [1, 1, 1, 1]);
+  lights[2] = new Light([-4, 7, 4], [0, 0, 0, 1], [1, 1, 1, 1], [1, 1, 1, 1]);
+  lights[3] = new Light([4, 7, 4], [0, 0, 0, 1], [1, 1, 1, 1], [1, 1, 1, 1]);
+
+  return lights;
+}
+
+function createSceneGraph(gl, resources) {
+
+  const root = new TransformationSGNode(glm.transform({ translate:[0, 0, 0]}));
+
+  return root;
+}
+
+function createScenes(gl, resources){
+
+  const scenes = [];
+
+  for (var i = 0; i < 3; i++) {
+    scenes[i] = new SGNode();
+  }
+
+  {
+    let texUnit = 3;
+    {
+      let water = new MaterialSGNode(
+        new TriTextureSGNode(resources.water_b1, 32, resources.water_b2, 16, resources.alphamask, 32,
+          new WaterSGNode(new RenderSGNode({
+            position: [-width, -height, 0,   width, -height, 0,   width, height, 0,   -width, height, 0],
+            normal: [0, 0, -1,   0, 0, -1,   0, 0, -1,   0, 0, -1],
+            index: [0, 1, 2,   2, 3, 0]
+          }))
+        )
+      );
+
+      water.ambient = [0, 0, 0, 1];
+      water.diffuse = [0.15, 0.15, 0.15, 1];
+      water.specular = [0.62, 0.62, 0.62, 1];
+      water.shininess = 50.0;
+
+      let waterShader = new ShaderSGNode(createProgram(gl, resources.mt_vs, resources.mt_fs),
+      new TransformationSGNode(glm.transform({ rotateX: 90}), water));
+
+
+      let skybox = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
+      new SkyboxSGNode(initSceneCube({
+        env_r : resources.scene0_env_r,
+        env_l : resources.scene0_env_l,
+        env_d : resources.scene0_env_d,
+        env_u : resources.scene0_env_u,
+        env_f : resources.scene0_env_f,
+        env_b : resources.scene0_env_b
+      }, texUnit), texUnit, new RenderSGNode(makeSphere(48, 40, 90))));
+
+      scenes[0].append(skybox);
+
+      scenes[0].append(waterShader);
+    }
+
+    {
+      let skybox = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
+      new SkyboxSGNode(initSceneCube({
+        env_r : resources.scene1_env_r,
+        env_l : resources.scene1_env_l,
+        env_d : resources.scene1_env_d,
+        env_u : resources.scene1_env_u,
+        env_f : resources.scene1_env_f,
+        env_b : resources.scene1_env_b
+      }, texUnit), texUnit, new RenderSGNode(makeSphere(48, 40, 90))));
+
+      scenes[1].append(skybox);
+    }
+
+    {
+      let sceneCube = initSceneCube({
+        env_r : resources.scene2_env_r,
+        env_l : resources.scene2_env_l,
+        env_d : resources.scene2_env_d,
+        env_u : resources.scene2_env_u,
+        env_f : resources.scene2_env_f,
+        env_b : resources.scene2_env_b
+      }, texUnit);
+
+      let skybox = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
+      new SkyboxSGNode(sceneCube, texUnit, new RenderSGNode(makeSphere(48, 40, 90))));
+
+      scenes[2].append(skybox);
+
+      scenes[2].append(new ShaderSGNode(createProgram(gl, resources.wt_vs, resources.wt_fs),
+      new MultiLightSGNode(lights,
+        new WaterSGNode(
+          new TransformationSGNode(glm.transform({ rotateX: 90 }),
+          new SkyboxSGNode(sceneCube, texUnit, new RenderSGNode({
+            position: [-width, -height, 0,   width, -height, 0,   width, height, 0,   -width, height, 0],
+            normal: [0, 0, -1,   0, 0, -1,   0, 0, -1,    0, 0, -1],
+            index: [0, 1, 2,   2, 3, 0]
+          }))))
+        )
+      ));
+    }
+  }
+
+  return scenes;
 }
 
 //load the shader resources using a utility function
@@ -98,8 +219,9 @@ loadResources({
   fs_single: 'shader/simple.fs.glsl',
 
   water_b: 'textures/water_black.jpg',
-  water_d1: 'textures/water_dark_1.jpg',
-  water_d2: 'textures/water_dark_2.jpg',
+  water_b1: 'textures/water_bright_1.jpg',
+  water_b2: 'textures/water_bright_2.jpg',
+  water_b3: 'textures/water_bright_3.jpg',
   tex1: 'textures/tex1.jpg',
   tex2: 'textures/tex2.jpg',
   tex3: 'textures/tex3.jpg',
@@ -134,123 +256,6 @@ loadResources({
   //render one frame
   render(0);
 });
-
-function createLights(gl, resources) {
-
-  const lights = [];
-
-  lights[0] = new Light([-4, 7, -4], [0, 0, 0, 1], [1, 1, 1, 1], [1, 1, 1, 1]);
-  lights[1] = new Light([4, 7, -4], [0, 0, 0, 1], [1, 1, 1, 1], [1, 1, 1, 1]);
-  lights[2] = new Light([-4, 7, 4], [0, 0, 0, 1], [1, 1, 1, 1], [1, 1, 1, 1]);
-  lights[3] = new Light([4, 7, 4], [0, 0, 0, 1], [1, 1, 1, 1], [1, 1, 1, 1]);
-
-  return lights;
-}
-
-function createSceneGraph(gl, resources) {
-
-  const root = new TransformationSGNode(glm.transform({ translate:[0, 0, 0]}));
-
-  {
-  }
-
-  {
-  }
-
-  return root;
-}
-
-function createScenes(gl, resources){
-
-  const scenes = [];
-
-  for (var i = 0; i < 3; i++) {
-    scenes[i] = new SGNode();
-  }
-
-  {
-    let texUnit = 3;
-    {
-      let sceneCube = initSceneCube({
-        env_r : resources.scene0_env_r,
-        env_l : resources.scene0_env_l,
-        env_d : resources.scene0_env_d,
-        env_u : resources.scene0_env_u,
-        env_f : resources.scene0_env_f,
-        env_b : resources.scene0_env_b
-      }, texUnit);
-
-      let skybox = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
-      new SkyboxSGNode(sceneCube, texUnit, new RenderSGNode(makeSphere(48, 40, 90))));
-
-      scenes[0].append(skybox);
-
-      scenes[0].append(new ShaderSGNode(createProgram(gl, resources.wt_vs, resources.wt_fs),
-      new MultiLightSGNode(lights,
-      new WaterSGNode(
-        new TransformationSGNode(glm.transform({ rotateX: 90 }),
-        new SkyboxSGNode(sceneCube, texUnit, new RenderSGNode({
-          position: [-width, -height, 0,   width, -height, 0,   width, height, 0,   -width, height, 0],
-          normal: [0, 0, -1,   0, 0, -1,   0, 0, -1,    0, 0, -1],
-          index: [0, 1, 2,   2, 3, 0]
-        }))))
-      )
-      ));
-    }
-
-    {
-      let skybox = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
-      new SkyboxSGNode(initSceneCube({
-        env_r : resources.scene1_env_r,
-        env_l : resources.scene1_env_l,
-        env_d : resources.scene1_env_d,
-        env_u : resources.scene1_env_u,
-        env_f : resources.scene1_env_f,
-        env_b : resources.scene1_env_b
-      }, texUnit), texUnit, new RenderSGNode(makeSphere(48, 40, 90))));
-
-      scenes[1].append(skybox);
-    }
-
-    {
-      let floor = new MaterialSGNode(
-        new TriTextureSGNode(resources.water_d1, 32, resources.water_d2, 16, resources.alphamask, 32,
-          new RenderSGNode({
-            position: [-width, -height, 0,   width, -height, 0,   width, height, 0,   -width, height, 0],
-            normal: [0, 0, -1,   0, 0, -1,   0, 0, -1,   0, 0, -1],
-            index: [0, 1, 2,   2, 3, 0]
-          })
-        )
-      );
-
-      floor.ambient = [0, 0, 0, 1];
-      floor.diffuse = [0.15, 0.15, 0.15, 1];
-      floor.specular = [0.62, 0.62, 0.62, 1];
-      floor.shininess = 50.0;
-
-      let floorShader = new ShaderSGNode(createProgram(gl, resources.mt_vs, resources.mt_fs),
-      new TransformationSGNode(glm.transform({ rotateX: 90}), floor));
-
-      let sceneCube = initSceneCube({
-        env_r : resources.scene2_env_r,
-        env_l : resources.scene2_env_l,
-        env_d : resources.scene2_env_d,
-        env_u : resources.scene2_env_u,
-        env_f : resources.scene2_env_f,
-        env_b : resources.scene2_env_b
-      }, texUnit);
-
-      let skybox = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
-      new SkyboxSGNode(sceneCube, texUnit, new RenderSGNode(makeSphere(48, 40, 90))));
-
-      scenes[2].append(skybox);
-
-      scenes[2].append(floorShader);
-    }
-  }
-
-  return scenes;
-}
 
 function initInteraction(canvas) {
   const mouse = {

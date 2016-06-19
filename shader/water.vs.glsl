@@ -16,7 +16,6 @@ uniform vec3 u_light3Pos;
 uniform float u_shift;
 
 varying float v_angle;
-varying float v_height;
 varying vec4 v_color;
 
 varying vec3 v_eyeVec;
@@ -31,11 +30,9 @@ varying vec3 v_normalVec;
 void main() {
   v_angle = (a_position.x + a_position.y)/100.0 - u_shift;
 
-  v_height = (sin(v_angle) + 1.0)/5.0;
-
   vec3 position = a_position;
 
-  position.z += v_height;
+  position.z += (sin(v_angle) + 1.0)/5.0;
 
   v_color = vec4(position,1);
 

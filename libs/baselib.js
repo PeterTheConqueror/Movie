@@ -2,7 +2,6 @@ class Camera {
   constructor(){
     this.noclip = false;
     this.baseposition = vec3.fromValues(0,4,-25);
-    //this.baseposition = vec3.fromValues(0,4,-100);
     this.addposition = vec3.fromValues(0,0,0);
     this.baserotation = vec3.fromValues(5,0,0);
     this.addrotation = vec3.fromValues(0,0,0);
@@ -22,7 +21,7 @@ class Camera {
     vec3.add(newAddPos, this.addposition, xdir);
     vec3.add(newAddPos, newAddPos, zdir);
 
-    this.addposition = newAddPos;// this.limitPosition(newAddPos);
+    this.addposition = this.limitPosition(newAddPos);
   }
 
   getDirVec(){

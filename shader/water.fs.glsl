@@ -26,7 +26,6 @@ uniform float u_shift;
 uniform samplerCube u_texCube;
 
 varying float v_angle;
-varying float v_height;
 varying vec4 v_color;
 
 varying vec3 v_eyeVec;

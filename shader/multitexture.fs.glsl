@@ -13,6 +13,6 @@ void main() {
   vec4 tex2 = texture2D(u_texture2, v_texCoord2);
   float alpha = texture2D(u_alphatexture, v_alphatexCoord).a;
   vec4 frag = alpha * tex1 + (1.0 - alpha) * tex2;
-  gl_FragColor = vec4(alpha * tex1.rgb + (1.0 - alpha) * tex2.rgb, 0.05);
+  gl_FragColor = vec4(alpha * tex1.rgb + (1.0 - alpha) * tex2.rgb, 0.85);
   //gl_FragColor = alpha * tex1 + (1.0 - alpha) * tex2;
 }
