@@ -9,5 +9,5 @@ void main() {
   vec3 normalVec = normalize(v_normalVec);
 	vec3 cameraRayVec = normalize(v_cameraRayVec);
 
-  gl_FragColor = textureCube(u_texCube, cameraRayVec);
+  gl_FragColor = vec4(textureCube(u_texCube, cameraRayVec).xyz, 1);
 }

@@ -16,17 +16,25 @@ struct Light {
 
 uniform Material u_material;
 
+uniform Light u_light0;
 uniform Light u_light1;
 uniform Light u_light2;
+uniform Light u_light3;
+uniform int u_lightNum;
+
+uniform samplerCube u_texCube;
+
+varying float v_height;
 
 varying vec3 v_eyeVec;
+varying vec3 v_light0Vec;
 varying vec3 v_light1Vec;
 varying vec3 v_light2Vec;
+varying vec3 v_light3Vec;
 
 varying vec3 v_cameraRayVec;
 varying vec3 v_normalVec;
 
-uniform samplerCube u_texCube;
 
 vec4 calculateSimplePointLight(Light light, Material material, vec3 lightVec, vec3 normalVec, vec3 eyeVec) {
 	lightVec = normalize(lightVec);
@@ -47,13 +55,26 @@ vec4 calculateSimplePointLight(Light light, Material material, vec3 lightVec, ve
 }
 
 void main() {
-  vec3 normalVec = normalize(v_normalVec);
-	vec3 cameraRayVec = normalize(v_cameraRayVec);
-
-  vec3 texCoords  = reflect(cameraRayVec, normalVec);
-  gl_FragColor = textureCube(u_texCube, texCoords);
-  //gl_FragColor = vec4(0.3,0.3,0.7,1);
-  //gl_FragColor =
-  //  calculateSimplePointLight(u_light1, u_material, v_light1Vec, v_normalVec, v_eyeVec)
-  //  + calculateSimplePointLight(u_light2, u_material, v_light2Vec, v_normalVec, v_eyeVec);
+	//vec3 normalVec = vec3(0,0,1);
+  //vec3 normalVec = normalize(v_normalVec);
+	// vec3 cameraRayVec = normalize(v_cameraRayVec);
+	//
+  // vec3 texCoords  = reflect(cameraRayVec, normalVec);
+  //gl_FragColor = vec4(textureCube(u_texCube, texCoords).xyz * v_height, 1.0);
+	gl_FragColor = vec4(0.3,0.3, 0.8, 1);
+	//gl_FragColor = vec4(-v_normalVec, 1);// textureCube(u_texCube, texCoords)+vec4(0.4,0,0,0);
+	// if(u_lightNum == 0){
+	// 	gl_FragColor = color;
+	// } else {
+	// 	gl_FragColor = calculateSimplePointLight(u_light0, u_material, v_light0Vec, v_normalVec, v_eyeVec);
+	// 	if(u_lightNum > 1){
+	// 		gl_FragColor += calculateSimplePointLight(u_light1, u_material, v_light1Vec, v_normalVec, v_eyeVec);
+	// 	}
+	// 	if(u_lightNum > 2){
+	// 		gl_FragColor += calculateSimplePointLight(u_light2, u_material, v_light2Vec, v_normalVec, v_eyeVec);
+	// 	}
+	// 	if(u_lightNum > 3){
+	// 		gl_FragColor += calculateSimplePointLight(u_light3, u_material, v_light3Vec, v_normalVec, v_eyeVec);
+	// 	}
+	// }
 }
