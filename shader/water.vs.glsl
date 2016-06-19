@@ -1,4 +1,7 @@
+precision mediump float;
+
 float M_PI = 3.1415926535897932384626433832795;
+
 attribute vec3 a_position;
 attribute vec3 a_normal;
 
@@ -10,9 +13,11 @@ uniform vec3 u_light0Pos;
 uniform vec3 u_light1Pos;
 uniform vec3 u_light2Pos;
 uniform vec3 u_light3Pos;
-uniform float shift;
+uniform float u_shift;
 
+varying float v_angle;
 varying float v_height;
+varying vec4 v_color;
 
 varying vec3 v_eyeVec;
 varying vec3 v_light0Vec;
@@ -24,9 +29,17 @@ varying vec3 v_cameraRayVec;
 varying vec3 v_normalVec;
 
 void main() {
-  v_height = 1.0*(sin((a_position.x + a_position.y + shift) * M_PI) + 1.0);
+  //v_angle = 500.0 * (a_position.x + a_position.z) - u_shift;
+  v_angle = 100.0 * (-a_position.x + a_position.y) - u_shift;
+  v_height = (sin(v_angle) + 1.0)/2.0;
 
-  vec4 eyePosition = u_modelView * vec4(a_position.x, a_position.y + v_height, a_position.z, 1);
+  vec3 position = a_position;
+
+  position.z += v_height;
+
+  v_color = vec4(position,1);
+
+  vec4 eyePosition = u_modelView * vec4(position, 1);
   //vec4 eyePosition = u_modelView * vec4(a_position, 1);
 
   v_cameraRayVec = u_invView * eyePosition.xyz;

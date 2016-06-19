@@ -321,7 +321,7 @@ class WaterSGNode extends SGNode {
   }
 
   render(context) {
-    gl.uniform1f(gl.getUniformLocation(context.shader, 'a_shift'), context.shift);
+    gl.uniform1f(gl.getUniformLocation(context.shader, 'u_shift'), context.shift);
 
     super.render(context);
   }

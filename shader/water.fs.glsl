@@ -21,10 +21,13 @@ uniform Light u_light1;
 uniform Light u_light2;
 uniform Light u_light3;
 uniform int u_lightNum;
+uniform float u_shift;
 
 uniform samplerCube u_texCube;
 
+varying float v_angle;
 varying float v_height;
+varying vec4 v_color;
 
 varying vec3 v_eyeVec;
 varying vec3 v_light0Vec;
@@ -62,7 +65,11 @@ void main() {
 	vec3 texCoords  = reflect(cameraRayVec, normalVec);
 	//gl_FragColor = vec4(textureCube(u_texCube, texCoords).xyz * v_height, 1.0);
 	//gl_FragColor = vec4(0.3,0.3, 0.8, 1);
-	gl_FragColor =  textureCube(u_texCube, texCoords)+vec4(0.4,0,0,0);
+	//gl_FragColor =  textureCube(u_texCube, texCoords);
+	gl_FragColor = vec4(v_height, v_height, v_height, 1);
+	//gl_FragColor = vec4(v_height/2.0, v_height/2.0, v_height/2.0, 1);
+	//float col = v_angle/100.0 - float(int(v_angle)/100)+0.5;
+	//gl_FragColor = vec4(col, col, col, 1);
 	// if(u_lightNum == 0){
 	// 	gl_FragColor = color;
 	// } else {

@@ -65,7 +65,7 @@ function render(timeInMilliseconds) {
 
   context.sceneMatrix = mat4.identity(mat4.create());
 
-  context.shift = timeInMilliseconds - Math.floor(timeInMilliseconds);
+  context.shift = (timeInMilliseconds/600);
 
   var scene;
   scene = 0;
@@ -306,7 +306,7 @@ function initInteraction(canvas) {
         camera.move(0, -1);
         //camera.addposition.z+=.1;
       } else if (event.code === 'KeyA') {
-        camera.move(0.1, 0);
+        camera.move(1, 0);
         //camera.addposition.x-=.1;
       } else if (event.code === 'KeyD') {
         camera.move(-1, 0);
