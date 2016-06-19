@@ -24,10 +24,10 @@ varying vec3 v_cameraRayVec;
 varying vec3 v_normalVec;
 
 void main() {
-  //v_height = 5.0*(sin((a_position.x + a_position.y + shift) * M_PI) + 1.0);
+  v_height = 1.0*(sin((a_position.x + a_position.y + shift) * M_PI) + 1.0);
 
-  //vec4 eyePosition = u_modelView * vec4(a_position.xy, a_position.z + v_height, 1);
-  vec4 eyePosition = u_modelView * vec4(a_position, 1);
+  vec4 eyePosition = u_modelView * vec4(a_position.x, a_position.y + v_height, a_position.z, 1);
+  //vec4 eyePosition = u_modelView * vec4(a_position, 1);
 
   v_cameraRayVec = u_invView * eyePosition.xyz;
 

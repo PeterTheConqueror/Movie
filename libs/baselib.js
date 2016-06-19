@@ -1,9 +1,9 @@
 class Camera {
   constructor(){
     this.noclip = false;
-    this.baseposition = vec3.fromValues(0,1,-5);
+    this.baseposition = vec3.fromValues(0,4,-25);
     this.addposition = vec3.fromValues(0,0,0);
-    this.baserotation = vec3.fromValues(0,0,0);
+    this.baserotation = vec3.fromValues(5,0,0);
     this.addrotation = vec3.fromValues(0,0,0);
   }
 
@@ -16,24 +16,13 @@ class Camera {
     vec3.normalize(zdir, zdir);
     vec3.scale(zdir, zdir, x);
 
-    var newPos = vec3.create();
+    var newAddPos = vec3.create();
 
-    vec3.add(newPos, this.addposition, xdir);
-    vec3.add(newPos, newPos, zdir);
+    vec3.add(newAddPos, this.addposition, xdir);
+    vec3.add(newAddPos, newAddPos, zdir);
 
-    this.addposition = this.limitPosition(newPos);
+    this.addposition = this.limitPosition(newAddPos);
   }
-  // rotate(delta){
-  //   const delta = { pitch : mouse.pos.x - pos.x, yaw : mouse.pos.y - pos.y };
-  //
-  //       this.heading = (this.heading + pitch) % 360;
-  //       this.pitch = (this.pitch + yaw / 2) % 360;
-  //       if(this.pitch > 90)
-  //           this.pitch = 90
-  //       else if(this.pitch < -90)
-  //           this.pitch = -90
-  //       this.compute_direction()
-  // }
 
   getDirVec(){
     var dir = vec3.fromValues(0, 0, 1);
@@ -58,17 +47,24 @@ class Camera {
     return rotation * Math.PI / 180;
   }
 
-  limitPosition(newPos){
-    var len = vec3.length(newPos);
-    if(len < 46)
+  limitPosition(newAddPos){
+    var totalPos = vec3.create();
+    vec3.add(totalPos, this.baseposition, newAddPos);
+    var len = vec3.length(totalPos);
+    if(len > 46 && totalPos[1] < 0.5)
     {
-      if(newPos[1] < 0.5){
-        newPos[1] += (0.5-newPos[1]);
-      }
-      return newPos;
-    } else {
       return this.addposition;
+    } else {
+      if(totalPos[1] < 0.5){
+        newAddPos[1] += (0.5 - totalPos[1]);
+        return newAddPos;
+      }
+      if(len > 46){
+        vec3.scale(totalPos, totalPos, 46 / len);
+      }
+      return vec3.subtract(totalPos, totalPos, this.baseposition);
     }
+    return newAddPos;
   }
 
   getPosition(){

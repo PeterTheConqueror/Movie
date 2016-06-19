@@ -56,13 +56,13 @@ vec4 calculateSimplePointLight(Light light, Material material, vec3 lightVec, ve
 
 void main() {
 	//vec3 normalVec = vec3(0,0,1);
-  //vec3 normalVec = normalize(v_normalVec);
-	// vec3 cameraRayVec = normalize(v_cameraRayVec);
+	vec3 normalVec = normalize(v_normalVec);
+	vec3 cameraRayVec = normalize(v_cameraRayVec);
 	//
-  // vec3 texCoords  = reflect(cameraRayVec, normalVec);
-  //gl_FragColor = vec4(textureCube(u_texCube, texCoords).xyz * v_height, 1.0);
-	gl_FragColor = vec4(0.3,0.3, 0.8, 1);
-	//gl_FragColor = vec4(-v_normalVec, 1);// textureCube(u_texCube, texCoords)+vec4(0.4,0,0,0);
+	vec3 texCoords  = reflect(cameraRayVec, normalVec);
+	//gl_FragColor = vec4(textureCube(u_texCube, texCoords).xyz * v_height, 1.0);
+	//gl_FragColor = vec4(0.3,0.3, 0.8, 1);
+	gl_FragColor =  textureCube(u_texCube, texCoords)+vec4(0.4,0,0,0);
 	// if(u_lightNum == 0){
 	// 	gl_FragColor = color;
 	// } else {

@@ -68,8 +68,8 @@ function render(timeInMilliseconds) {
   context.shift = timeInMilliseconds - Math.floor(timeInMilliseconds);
 
   var scene;
-  //scene = 0;
-  scene = Math.floor(timeInMilliseconds / 1000);
+  scene = 0;
+  //scene = Math.floor(timeInMilliseconds / 1000);
   //scene = Math.floor(timeInMilliseconds / 2000);
   //scene = Math.floor(timeInMilliseconds / 10000);
   if(scenes[scene % scenes.length]){
@@ -191,7 +191,7 @@ function createScenes(gl, resources){
         new TransformationSGNode(glm.transform({ rotateX: 90 }),
         new SkyboxSGNode(sceneCube, texUnit, new RenderSGNode({
           position: [-width, -height, 0,   width, -height, 0,   width, height, 0,   -width, height, 0],
-          normal: [0, 0, 1,   0, 0, 1,   0, 0, 1,    0, 0, 1],
+          normal: [0, 0, -1,   0, 0, -1,   0, 0, -1,    0, 0, -1],
           index: [0, 1, 2,   2, 3, 0]
         }))))
       )
@@ -217,7 +217,7 @@ function createScenes(gl, resources){
         new TriTextureSGNode(resources.water_d1, 32, resources.water_d2, 16, resources.alphamask, 32,
           new RenderSGNode({
             position: [-width, -height, 0,   width, -height, 0,   width, height, 0,   -width, height, 0],
-            normal: [0, 0, 1,   0, 0, 1,   0, 0, 1,   0, 0, 1],
+            normal: [0, 0, -1,   0, 0, -1,   0, 0, -1,   0, 0, -1],
             index: [0, 1, 2,   2, 3, 0]
           })
         )
