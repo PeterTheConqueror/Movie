@@ -26,25 +26,31 @@ var pyramidVertices = new Float32Array([
   s, 0.0, s,
   // Tip
   0, h, 0,
-  // Normal of Base
-  0, 1, 0,
-  // Normal of Sides (easy to calculate because h == s)
-  1, -1, 0,
-  -1, 1, 0,
-  1, 1, 0,
-  1, 1, 0,
 ]);
 
 var pyramidColors = new Float32Array([
-  0,1,1, 0,1,1, 0,1,1, 0,1,1,
-  1,0,1, 1,0,1, 1,0,1, 1,0,1,
-  1,0,0, 1,0,0, 1,0,0, 1,0,0,
+  0.3,0.3,0.7, 0.3,0.3,0.7, 0.3,0.3,0.7, 0.3,0.3,0.7,
+  0.3,0.4,0.3, 0.3,0.4,0.3, 0.3,0.4,0.3, 0.3,0.4,0.3,
+  0.5,0.4,0.5, 0.5,0.4,0.5, 0.5,0.4,0.5, 0.5,0.4,0.5,
 ]);
 
 var pyramidIndices =  new Float32Array([
   0,1,2, 1,2,3,
   0,1,4, 0,2,4,
   1,3,4, 2,3,4
+]);
+
+var pyramidNormals = new Float32Array([
+  // Normal of Sides (easy to calculate because h == s)
+  Math.SQRT2/(1 + Math.SQRT2), 1/(1 + Math.SQRT2), 0,
+
+  -Math.SQRT1_2, -Math.SQRT1_2, 0,
+  -Math.SQRT1_2, Math.SQRT1_2, 0,
+  Math.SQRT1_2, Math.SQRT1_2, 0,
+  Math.SQRT1_2, Math.SQRT1_2, 0,
+
+  // Normal of Base
+  0, 1, 0,
 ]);
 
 //size of triangular Prism
@@ -79,11 +85,11 @@ var triangularPrismVertices = new Float32Array([
   a, 0.0,  0.0,
 ]);
 var triangularPrismColors = new Float32Array([
-  0,1,1, 0,1,1, 0,1,1,
-  1,0,1, 1,0,1, 1,0,1,
-  1,0,0, 1,0,0, 1,0,0, 1,0,0,
-  0,0,1, 0,0,1, 0,0,1, 0,0,1,
-  1,1,0, 1,1,0, 1,1,0, 1,1,0,
+  1,1,1, 1,1,1, 1,1,1,
+  1,1,1, 1,1,1, 1,1,1,
+  0.76,0.76,0.76, 0.76,0.76,0.76, 0.76,0.76,0.76, 0.76,0.76,0.76,
+  0.76,0.76,0.76, 0.76,0.76,0.76, 0.76,0.76,0.76, 0.76,0.76,0.76,
+  0.76,0.76,0.76, 0.76,0.76,0.76, 0.76,0.76,0.76, 0.76,0.76,0.76,
 ]);
 var triangularPrismIndices =  new Float32Array([
   0,1,2, 3,4,5,
@@ -102,12 +108,12 @@ var cubeVertices = new Float32Array([
   -s, s,-s, -s, s, s, s, s, s, s, s,-s,
 ]);
 var cubeColors = new Float32Array([
-  0,1,1, 0,1,1, 0,1,1, 0,1,1,
-  1,0,1, 1,0,1, 1,0,1, 1,0,1,
-  1,0,0, 1,0,0, 1,0,0, 1,0,0,
-  0,0,1, 0,0,1, 0,0,1, 0,0,1,
-  1,1,0, 1,1,0, 1,1,0, 1,1,0,
-  0,1,0, 0,1,0, 0,1,0, 0,1,0
+  1,1,1, 1,1,1, 1,1,1, 1,1,1,
+  1,1,1, 1,1,1, 1,1,1, 1,1,1,
+  0,0,0, 0,0,0, 0,0,0, 0,0,0,
+  0,0,0, 0,0,0, 0,0,0, 0,0,0,
+  1,1,1, 1,1,1, 1,1,1, 1,1,1,
+  0,0,0, 0,0,0, 0,0,0, 0,0,0,
 ]);
 var cubeIndices =  new Float32Array([
   0,1,2, 0,2,3,
@@ -158,6 +164,11 @@ var cubeVertexBuffer, cubeColorBuffer, cubeIndexBuffer;
 var triangularPrismVertexBuffer, triangularPrismColorBuffer, triangularPrismIndexBuffer;
 
 function setUpPlane(gl, resources) {
+  //initTexture();
+  initpyramidBuffer();
+  initCubeBuffer();
+  initTriangularPrismBuffer();
+
   const planeShader = new ShaderSGNode(createProgram(gl, resources.vs_single, resources.fs_single));
 
   plane = new TransformationSGNode();
@@ -458,6 +469,7 @@ function movePlane(time){
   var planeMatrix = glm.transform({translate:[8*Math.sin(movement), 0, 8*Math.cos(movement)]});
   mat4.rotateY(planeMatrix, planeMatrix, movement+Math.PI);
   mat4.multiply(planeMatrix, planeMatrix, glm.rotateX(3*animatedAngle));
+  //var planeMatrix =  glm.rotateX(3*animatedAngle);
   plane.matrix = (planeMatrix);
 
   //animate based on elapsed time

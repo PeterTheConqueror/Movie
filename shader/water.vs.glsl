@@ -5,6 +5,7 @@ float M_PI = 3.1415926535897932384626433832795;
 attribute vec3 a_position;
 attribute vec3 a_normal;
 
+uniform bool u_useCube;
 uniform mat4 u_modelView;
 uniform mat3 u_normalMatrix;
 uniform mat4 u_projection;
@@ -28,11 +29,17 @@ varying vec3 v_cameraRayVec;
 varying vec3 v_normalVec;
 
 void main() {
-  v_angle = (a_position.x + a_position.y)/100.0 - u_shift;
+  vec3 translation;
+  if(u_useCube){
+    v_angle = (a_position.x + a_position.y)/100.0 - u_shift;
+    translation = vec3(0, 0, (sin(v_angle) + 1.0)/5.0);
+  } else {
+    translation = vec3(0, 0, 0);
+  }
 
   vec3 position = a_position;
 
-  position.z += (sin(v_angle) + 1.0)/5.0;
+  position += translation;
 
   v_color = vec4(position,1);
 

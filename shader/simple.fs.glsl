@@ -18,5 +18,5 @@ void main() {
 
   //TASK 1-4
   //we use the provided interpolated color from our three vertices
-  gl_FragColor = vec4(v_color, u_alpha);
+  gl_FragColor = vec4(v_color, 1);
 }

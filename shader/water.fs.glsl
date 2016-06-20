@@ -23,7 +23,9 @@ uniform Light u_light3;
 uniform int u_lightNum;
 uniform float u_shift;
 
+uniform bool u_useCube;
 uniform samplerCube u_texCube;
+uniform vec4 u_color;
 
 varying float v_angle;
 varying vec4 v_color;
@@ -61,13 +63,19 @@ void main() {
 	vec3 normalVec = normalize(v_normalVec);
 	vec3 cameraRayVec = normalize(v_cameraRayVec);
 	//
-	normalVec = vec3(normalVec.x, normalVec.y * cos(v_angle) - normalVec.z * sin(v_angle), normalVec.y * sin(v_angle) + normalVec.z * cos(v_angle));
-	normalVec = normalize(normalVec);
+	if(u_useCube){
+		normalVec = vec3(normalVec.x, normalVec.y * cos(v_angle) - normalVec.z * sin(v_angle), normalVec.y * sin(v_angle) + normalVec.z * cos(v_angle));
+		normalVec = normalize(normalVec);
+	}
 
 	vec3 texCoords  = reflect(cameraRayVec, normalVec);
 	//gl_FragColor = vec4(textureCube(u_texCube, texCoords).xyz * v_height, 1.0);
 	//gl_FragColor = vec4(0.3,0.3, 0.8, 1);
-	gl_FragColor =  textureCube(u_texCube, texCoords);
+	if(u_useCube){
+		gl_FragColor =  textureCube(u_texCube, texCoords);
+	}else{
+		gl_FragColor =  vec4(0.4 * textureCube(u_texCube, texCoords).xyz + 0.6 * u_color.xyz, u_color.a);
+	}
 	//gl_FragColor = vec4(normalVec, 1);
 	//gl_FragColor = vec4(v_height/2.0, v_height/2.0, v_height/2.0, 1);
 	//float col = v_angle/100.0 - float(int(v_angle)/100)+0.5;

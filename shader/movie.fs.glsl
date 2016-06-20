@@ -12,6 +12,9 @@ struct Light {
 	vec4 ambient;
 	vec4 diffuse;
 	vec4 specular;
+	bool spotlight;
+	vec3 direction;
+	float angle;
 };
 
 uniform Material u_material;

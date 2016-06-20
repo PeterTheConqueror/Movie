@@ -12,7 +12,6 @@ class Camera {
     var xdir = vec3.scale(vec3.create(), dir, z);
 
     var zdir = vec3.rotateY(vec3.create(), dir, vec3.create(), Math.PI / 2);
-    zdir[1] = 0;
     vec3.normalize(zdir, zdir);
     vec3.scale(zdir, zdir, x);
 
@@ -47,10 +46,20 @@ class Camera {
     return rotation * Math.PI / 180;
   }
 
+  // This makes sure the Camera stays where it should be
   limitPosition(newAddPos){
     var totalPos = vec3.create();
     vec3.add(totalPos, this.baseposition, newAddPos);
     var len = vec3.length(totalPos);
+
+    // In scene 2 going below y==0 is allowed
+    if(scene == 1){
+      if(len > 46){
+        vec3.scale(totalPos, totalPos, 46 / len);
+      }
+      return vec3.subtract(totalPos, totalPos, this.baseposition);
+    }
+    // In the other scenes it is not
     if(len > 46 && totalPos[1] < 0.5)
     {
       return this.addposition;
@@ -90,85 +99,113 @@ class Camera {
 }
 
 class Light {
-  constructor(position, ambient, diffuse, specular)
+  constructor(position, ambient, diffuse, specular, direction, angle)
   {
     this.position = position;
     this.ambient = ambient;
     this.diffuse = diffuse;
     this.specular = specular;
+    this.direction = direction;
+    this.angle = angle;
   }
 
   setParameters(lightNode, i){
-    //lightNode.position = this.position;
-    lightNode.ambient = this.ambient;
-    lightNode.diffuse = this.diffuse;
-    lightNode.specular = this.specular;
-    lightNode.uniform += i != null ? i : '';
+    if(lightNode instanceof MyLightSGNode){
+      lightNode.position = this.position;
+      lightNode.ambient = this.ambient;
+      lightNode.diffuse = this.diffuse;
+      lightNode.specular = this.specular;
+      lightNode.uniform += i != null ? i : '';
+    }
+    if(lightNode instanceof SpotlightSGNode && this.direction && this.angle){
+      lightNode.direction = this.direction;
+      lightNode.angle = this.angle;
+    }
   }
 }
 
 /*
- *  Copy of LightSGNode that is NOT a TransformationSGNode, because I have no idea why adding a light should change the position of all child elements in the Scene Graph
- *  Also, the LightSGNode constructor does not work, it calls the TransformationSGNode constructor with first parameter children whereas TSGNode expects a matrix
- */
+*  Copy of LightSGNode that is NOT a TransformationSGNode, because I have no idea why adding a light should change the position of all child elements in the Scene Graph
+*  Also, the LightSGNode constructor does not work, it calls the TransformationSGNode constructor with first parameter children whereas TSGNode expects a matrix
+*/
 class MyLightSGNode extends SGNode {
 
- constructor(children, light, i) {
-   super(children);
-   this.position = light.position;
-   this.ambient = light.ambient;
-   this.diffuse = light.diffuse;
-   this.specular = light.specular;
-   //uniform name
-   this.uniform = 'u_light' + i != null ? i : '';
+  constructor(children, light, i) {
+    super(children);
+    this.position = light.position;
+    this.ambient = light.ambient;
+    this.diffuse = light.diffuse;
+    this.specular = light.specular;
+    //uniform name
+    this.uniform = 'u_light' + i != null ? i : '';
 
-   this._worldPosition = null;
- }
+    this._worldPosition = null;
+  }
 
- setLightUniforms(context) {
-   const gl = context.gl;
-   //no materials in use
-   if (!context.shader || !isValidUniformLocation(gl.getUniformLocation(context.shader, this.uniform+'.ambient'))) {
-     return;
-   }
-   gl.uniform4fv(gl.getUniformLocation(context.shader, this.uniform+'.ambient'), this.ambient);
-   gl.uniform4fv(gl.getUniformLocation(context.shader, this.uniform+'.diffuse'), this.diffuse);
-   gl.uniform4fv(gl.getUniformLocation(context.shader, this.uniform+'.specular'), this.specular);
- }
+  setLightUniforms(context) {
+    const gl = context.gl;
+    //no materials in use
+    if (!context.shader || !isValidUniformLocation(gl.getUniformLocation(context.shader, this.uniform+'.ambient'))) {
+      return;
+    }
+    gl.uniform4fv(gl.getUniformLocation(context.shader, this.uniform+'.ambient'), this.ambient);
+    gl.uniform4fv(gl.getUniformLocation(context.shader, this.uniform+'.diffuse'), this.diffuse);
+    gl.uniform4fv(gl.getUniformLocation(context.shader, this.uniform+'.specular'), this.specular);
+  }
 
- setLightPosition(context) {
-   const gl = context.gl;
-   if (!context.shader || !isValidUniformLocation(gl.getUniformLocation(context.shader, this.uniform+'Pos'))) {
-     return;
-   }
-   const position = this._worldPosition || this.position;
-   gl.uniform3f(gl.getUniformLocation(context.shader, this.uniform+'Pos'), position[0], position[1], position[2]);
- }
+  setLightPosition(context) {
+    const gl = context.gl;
+    if (!context.shader || !isValidUniformLocation(gl.getUniformLocation(context.shader, this.uniform+'Pos'))) {
+      return;
+    }
+    const position = this._worldPosition || this.position;
+    gl.uniform3f(gl.getUniformLocation(context.shader, this.uniform+'Pos'), position[0], position[1], position[2]);
+  }
 
- computeLightPosition(context) {
-   //transform with the current model view matrix
-   const modelViewMatrix = mat4.multiply(mat4.create(), context.viewMatrix, context.sceneMatrix);
-   const original = this.position;
-   const position =  vec4.transformMat4(vec4.create(), vec4.fromValues(original[0], original[1],original[2], 1), modelViewMatrix);
+  computeLightPosition(context) {
+    //transform with the current model view matrix
+    const modelViewMatrix = mat4.multiply(mat4.create(), context.viewMatrix, context.sceneMatrix);
+    const original = this.position;
+    const position =  vec4.transformMat4(vec4.create(), vec4.fromValues(original[0], original[1],original[2], 1), modelViewMatrix);
 
-   this._worldPosition = position;
- }
+    this._worldPosition = position;
+  }
 
- /**
+  /**
   * set the light uniforms without updating the last light position
   */
- setLight(context) {
-   this.setLightPosition(context);
-   this.setLightUniforms(context);
- }
+  setLight(context) {
+    this.setLightPosition(context);
+    this.setLightUniforms(context);
+  }
 
- render(context) {
-   this.computeLightPosition(context);
-   this.setLight(context);
+  render(context) {
+    this.computeLightPosition(context);
+    this.setLight(context);
 
-   //render children
-   super.render(context);
- }
+    //render children
+    super.render(context);
+  }
+}
+
+class SpotlightSGNode extends MyLightSGNode{
+
+
+  constructor(children, light, i) {
+    super(children, light, i);
+    this.direction = light.direction;
+    this.angle = light.angle;
+  }
+
+  render(context){
+    // Calculate direction from basedirection of the node and scene matrix
+    var currentDirection = vec3.transformMat3(vec3.create(), this.direction, mat3.fromMat4(mat3.create(), context.sceneMatrix));
+
+    gl.uniform1i(gl.getUniformLocation(context.shader, this.uniform+'.spotlight'), 1);
+    gl.uniform3fv(gl.getUniformLocation(context.shader, this.uniform+'.direction'), currentDirection);
+    gl.uniform1f(gl.getUniformLocation(context.shader, this.uniform+'.angle'), this.angle);
+    super.render(context);
+  }
 }
 
 class MultiLightSGNode extends SGNode {
@@ -178,7 +215,11 @@ class MultiLightSGNode extends SGNode {
     this.lightNum = lights.length;
     this.top = children;
     for (var i = 0; i < lights.length; i++) {
-      var lightNode = new MyLightSGNode(this.top, lights[i], i);
+      var lightNode =
+      // If direction and angle are set, it is a spotlight, otherwise a pointlight
+      Boolean(lights[i].direction) && Boolean(lights[i].angle) ?
+      new SpotlightSGNode(this.top, lights[i], i) :
+      new MyLightSGNode(this.top, lights[i], i);
       lights[i].setParameters(lightNode, i);
       lightNode.children = [this.top];
       lightNode.matrix = mat4.translate(mat4.create(), mat4.create(), vec3.negate(vec3.create(), lights[i].position));
@@ -206,8 +247,8 @@ class ExtendedMaterialSGNode extends MaterialSGNode {
 }
 
 /**
- *
- **/
+*
+**/
 class TriTextureSGNode extends SGNode {
   constructor(image1, repeat1, image2, repeat2, alphaimage, alpharepeat, children) {
     super(children);
@@ -282,7 +323,7 @@ class TriTextureSGNode extends SGNode {
 class SetUniformsSGNode extends SetUniformSGNode {
   constructor(uniforms, values, children) {
     if (uniforms.constructor.name !== 'Array' || values.constructor.name !== 'Array' || uniforms.length != values.length)
-      throw "Illegal Arguments for SetUniformsSGNode";
+    throw "Illegal Arguments for SetUniformsSGNode";
     super(uniforms[0], values[0], uniforms.length > 1 ? new SetUniformsSGNode(uniforms.splice(0, 1), values.splice(0, 1), children) : children);
   }
 }
@@ -314,7 +355,7 @@ class SkyboxSGNode extends SGNode {
   }
 }
 
-class WaterSGNode extends SGNode {
+class ShiftSGNode extends SGNode {
 
   constructor(children) {
     super(children);
@@ -325,6 +366,98 @@ class WaterSGNode extends SGNode {
 
     super.render(context);
   }
+}
+
+class TransparentSGNode extends TransformationSGNode{
+
+  constructor(matrix, color, child) {
+    child instanceof RenderSGNode ? super(matrix,  child) : super();
+    this.color = color;
+  }
+
+  render(context){
+    gl.uniform4fv(gl.getUniformLocation(context.shader, 'u_color'), this.color);
+
+    super.render(context);
+  }
+}
+
+class TransparencySGNode extends ShaderSGNode {
+
+  constructor(shader, opaqueNodes, transparentNodes) {
+    super(shader, transparentNodes);
+    //this.shader = shader;
+    this.opaqueNodes = typeof opaqueNodes !== 'undefined' ? [].concat(opaqueNodes) : [];
+  }
+
+  appendNodes(nodes){
+    this.children.concat(nodes);
+  }
+
+  appendOpaqueNodes(opaqueNodes) {
+    this.opaqueNodes.concat(opaqueNodes);
+  }
+
+  appendOpaque(opaqueChild) {
+    this.opaqueNodes.push(opaqueChild);
+    return opaqueChild;
+  }
+
+  pushOpaque(opaqueChild) {
+    return this.appendOpaque(opaqueChild);
+  }
+
+  render(context) {
+    this.opaqueNodes.forEach(c => c.render(context));
+
+    sortTranspObjects(context.sceneMatrix, camera.getPosition(), this);
+
+    super.render(context);
+  }
+}
+
+// We order the children of each node
+// This will produce the correct iteration order for each layer of the tree,
+// but might produce incorrect results for nodes on different layers
+function sortTranspObjects(matrix, cam, node){
+
+  const nodes = node.children;
+
+  var array = [];
+
+  for (var i = 0; i < nodes.length; i++) {
+
+    // Calculate matrix of OpaqueSGNode
+    let distance;
+    let nodeMatrix = matrix;
+    if(nodes[i].matrix){
+      nodeMatrix = mat4.multiply(mat4.create(), matrix, nodes[i].matrix);
+      // Translation (matrix elements [3, 7, 11]) of RenderSGNode = center of rendered Node
+      // Calculate the distance between camera and nodecenter
+      distance = vec3.distance(cam, [nodeMatrix[12], nodeMatrix[13], nodeMatrix[14]]);
+    }else{
+      //If node does not have a matrix we set distance to a big value
+      //This will prevent nodes without own matrix from getting reordered all the time
+      distance = 5000 + i;
+    }
+
+    // Map nodes to key-value pairs (key == distance from camera)
+    array[i] = { key : distance, value : nodes[i] };
+
+    // Call function recursively for all Nodes
+    sortTranspObjects(nodeMatrix, cam, nodes[i]);
+  }
+
+  // Sort nodes by distance to camera
+  //array = array.sort((a, b) => a.key - b.key);
+  var array0 = array.sort((a, b) =>  b.key - a.key);
+
+  // Map back from key-value pairs to nodes only
+  for (var i = 0; i < array0.length; i++) {
+    array0[i] = array0[i].value;
+  }
+
+  node.children = array0;
 }
 
 function initSceneCube(scene, textureunit) {
@@ -354,4 +487,8 @@ function initSceneCube(scene, textureunit) {
   //reset flipping
 
   return texture;
+}
+
+function createGreyTone(grey, alpha){
+  return [grey, grey, grey, alpha];
 }
