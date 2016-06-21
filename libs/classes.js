@@ -30,6 +30,31 @@ class Camera {
       let ratio = (time-fall)/30000;
       vec3.add(camera.baserotation, vec3.fromValues(-25,0,0), vec3.fromValues(65*ratio,0,0));
     }
+
+    // const movement = context.time / 1000;
+    // const risetime = (context.time - rise)/1000;
+    // var planeMatrix;
+    // //animate based on elapsed time
+    // planeMatrix = glm.transform({rotateY:-90, translate:[0, 0, -movement*5]});
+    // if(context.time > rise && context.time <= crash){
+    //   planeMatrix = glm.transform({rotateY:-90, translate:[0, 0, -rise/1000*5]});
+    //   mat4.translate(planeMatrix, planeMatrix, [8*Math.sin(movement-Math.PI/2)*Math.log(risetime+1), 0, 8*Math.cos(movement-Math.PI/2)*Math.log(risetime+1)]);
+    //   mat4.rotateY(planeMatrix, planeMatrix, movement+Math.PI/2);
+    //   mat4.rotateX(planeMatrix, planeMatrix, 60*Math.PI/180);
+    //   mat4.translate(planeMatrix, planeMatrix, [0, (risetime)/3, 0]);
+    // } else if(context.time > crash && context.time <= fall){
+    //   planeMatrix = glm.transform({rotateY:-90, translate:[0, 0, -rise/1000*5]});
+    //   mat4.translate(planeMatrix, planeMatrix, [8*Math.sin(movement-Math.PI/2)*Math.log(risetime+1), 0, 8*Math.cos(movement-Math.PI/2)*Math.log(risetime+1)]);
+    //   mat4.translate(planeMatrix, planeMatrix, [0, (risetime)/3, 0]);
+    //   mat4.rotateY(planeMatrix, planeMatrix, movement+Math.PI);
+    //   mat4.translate(planeMatrix, planeMatrix, [0, -(context.time - crash) /400, 0]);
+    //   mat4.rotateZ(planeMatrix, planeMatrix, 30 * Math.PI / 180);
+    //   mat4.rotateX(planeMatrix, planeMatrix, 3 * (context.time - crash) / 1000);
+    // } else if(context.time > fall){
+    //   mat4.fromTranslation(planeMatrix, [0, (45 - (movement - 20) * 5), 0 ]);
+    //   mat4.rotateZ(planeMatrix, planeMatrix, Math.PI/2);
+    //   mat4.rotateX(planeMatrix, planeMatrix, movement * 10);
+    // }
   }
 
   move(x, z){

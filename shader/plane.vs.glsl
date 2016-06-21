@@ -1,7 +1,10 @@
 precision mediump float;
 
 attribute vec3 a_position;
+attribute vec3 a_color;
 attribute vec3 a_normal;
+
+varying vec3 v_color;
 
 uniform mat4 u_modelView;
 uniform mat3 u_normalMatrix;
@@ -20,11 +23,9 @@ varying vec3 v_cameraRayVec;
 varying vec3 v_normalVec;
 
 void main() {
-  vec3 translation;
+  v_color = a_color;
 
-  v_position = a_position;
-
-  vec4 eyePosition = u_modelView * vec4(v_position, 1);
+  vec4 eyePosition = u_modelView * vec4(a_position, 1);
 
   v_cameraRayVec = u_invView * eyePosition.xyz;
 
@@ -34,7 +35,4 @@ void main() {
   v_light1Vec = u_light1Pos - eyePosition.xyz;
 
   gl_Position = u_projection * eyePosition;
-
-  gl_Position = u_projection * u_modelView
-    * vec4(a_position, 1);
 }

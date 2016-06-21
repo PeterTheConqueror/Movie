@@ -28,6 +28,11 @@ function init(resources) {
 
   gl.enable(gl.DEPTH_TEST);
 
+  // Enable backface culling so that only one the front side of clouds is visible
+  // gl.enable(gl.CULL_FACE)
+  //
+  // gl.cullFace(gl.BACK);
+
   camera = new Camera();
 
   createSceneGraph(gl, resources);
@@ -68,17 +73,12 @@ function setScene(context, time) {
   // which can change their matrix according to this in the prerender function
   context.time = time;
 
-  // Camera flight
   camera.moveCamera(time);
 
-  // Calculate which scene should be shown
-  //scene = Math.floor(context.time / 10000);
-  scene = 2;
+  scene = Math.floor(context.time / 10000);
 }
 
 function createSceneGraph(gl, resources) {
-
-  // Initialization of scene graph
 
   createLights(gl, resources);
 
@@ -133,20 +133,14 @@ function createScenes(gl, resources){
   }
 
   {
-    // All skyboxes are stored in texture unit 3
     const texUnit = 3;
-
-    // Shader for water surfaces (special effect animated wave movements)
     const waterShader = createProgram(gl, resources.wt_vs, resources.wt_fs);
 
     {
       const scene = scenes[0];
 
-      // Add sun to skybox shader
-      const skybox = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs), sunlight);
-
-      // Add the skybox node itself, each scene has own skybox
-      skybox.append(new SkyboxSGNode(initSceneCube({
+      const skybox = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
+      new SkyboxSGNode(initSceneCube({
         env_r : resources.scene0_env_r,
         env_l : resources.scene0_env_l,
         env_d : resources.scene0_env_d,
@@ -155,14 +149,20 @@ function createScenes(gl, resources){
         env_b : resources.scene0_env_b
       }, texUnit), texUnit, new RenderSGNode(makeSphere(48, 40, 90))));
 
-      // Multitexturing is used here, also animated wave movements (but no mirroring of the skybox, which is in third scene)
-      const water =  new MultiTextureSGNode(true, resources.alphamask, 32, resources.water_b1, 32, resources.water_b2, 16,
-        new ShiftSGNode(new RenderSGNode({
-          position: [-width, -height, 0,   width, -height, 0,   width, height, 0,   -width, height, 0],
-          normal: [0, 0, -1,   0, 0, -1,   0, 0, -1,   0, 0, -1],
-          index: [0, 1, 2,   2, 3, 0]
-        }))
+      const water = new MaterialSGNode(
+        new MultiTextureSGNode(true, resources.alphamask, 32, resources.water_b1, 32, resources.water_b2, 16,
+          new ShiftSGNode(new RenderSGNode({
+            position: [-width, -height, 0,   width, -height, 0,   width, height, 0,   -width, height, 0],
+            normal: [0, 0, -1,   0, 0, -1,   0, 0, -1,   0, 0, -1],
+            index: [0, 1, 2,   2, 3, 0]
+          }))
+        )
       );
+
+      water.ambient = [0, 0, 0, 1];
+      water.diffuse = [0.15, 0.15, 0.15, 1];
+      water.specular = [0.62, 0.62, 0.62, 1];
+      water.shininess = 50.0;
 
       scene.append(skybox);
       scene.append(new ShaderSGNode(createProgram(gl, resources.mt_vs, resources.mt_fs),
@@ -170,12 +170,10 @@ function createScenes(gl, resources){
     }
 
     {
-      // Transparency Node that makes sure opaque objects are rendered first, and then transparent objects ordered by camera distance (further away = earlier)
       const scene = new TransparencySGNode(waterShader
         , planeroot
       );
 
-      // this cube is used for clouds and skybox (but hard to see in clouds)
       const sceneCube = initSceneCube({
         env_r : resources.scene1_env_r,
         env_l : resources.scene1_env_l,
@@ -185,7 +183,6 @@ function createScenes(gl, resources){
         env_b : resources.scene1_env_b
       }, texUnit);
 
-      // Uses same shader and node as multitexturing, but only blends a lightning into the scene
       const lightning = new SGNode(new MultiTextureSGNode(false, resources.lightning_alpha, 1, resources.lightning, 32, null, null,
         new RenderSGNode({
           position: [-width, -height, 0,   width, -height, 0,   width, height, 0,   -width, height, 0],
@@ -194,14 +191,12 @@ function createScenes(gl, resources){
         })
       ));
 
-      // Only render lightning for half a second, for this we override the parent SGNodes render method
       lightning.render = context => {
         if(Math.abs(context.time-crash)<250){
           lightning.children.forEach(c=>c.render(context));
         }
       };
 
-      // Shader for lightning, same as multitexturing
       const lightningShader = new ShaderSGNode(createProgram(gl, resources.mt_vs, resources.mt_fs), lightning);
 
       const skybox = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
@@ -218,10 +213,9 @@ function createScenes(gl, resources){
     }
 
     {
-      const scene = scenes[2];
+      let scene = scenes[2];
 
-      // this cube is used for water surface (mirroring) and skybox
-      const sceneCube = initSceneCube({
+      let sceneCube = initSceneCube({
         env_r : resources.scene2_env_r,
         env_l : resources.scene2_env_l,
         env_d : resources.scene2_env_d,
@@ -230,17 +224,14 @@ function createScenes(gl, resources){
         env_b : resources.scene2_env_b
       }, texUnit);
 
-      const skybox = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
+      let skybox = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
       new SkyboxSGNode(sceneCube, texUnit, new RenderSGNode(makeSphere(48, 40, 90))));
 
-      const water = new SetUniformSGNode('u_mirror', true);
-      const waterNode = new ShaderSGNode(waterShader, water);
+      let water = new SetUniformSGNode('u_mirror', true);
+      let waterNode = new ShaderSGNode(waterShader, water);
 
-      // Attach lights so that they are visible in scene
       water.append(sunlight);
       water.append(spotlight);
-
-      // Special effect animated wave movements
       water.append(new ShiftSGNode(
         new TransformationSGNode(glm.transform({ rotateX: 90 }),
         new SkyboxSGNode(sceneCube, texUnit, new RenderSGNode({
@@ -259,6 +250,7 @@ function createScenes(gl, resources){
   return scenes;
 }
 
+//load the shader resources using a utility function
 loadResources({
   mt_vs: 'shader/multitexture.vs.glsl',
   mt_fs: 'shader/multitexture.fs.glsl',
@@ -295,21 +287,20 @@ loadResources({
   scene2_env_u: 'skybox/DarkStormyUp.png',
   scene2_env_f: 'skybox/DarkStormyFront.png',
   scene2_env_b: 'skybox/DarkStormyBack.png',
-}).then(function (resources) {
+}).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
 
-  //render first frame
+  //render one frame
   render(0);
 });
 
-
-// Almost the same as in exercise
 function initInteraction(canvas) {
   const mouse = {
     pos: { x : 0, y : 0},
     leftButtonDown: false
   };
   function toPos(event) {
+    //convert to local coordinates
     const rect = canvas.getBoundingClientRect();
     return {
       x: event.clientX - rect.left,
@@ -350,12 +341,16 @@ function initInteraction(canvas) {
     if(camera.noclip){
       if (event.code === 'KeyW') {
         camera.move(0, 1);
+        //camera.addposition.z-=.1;
       } else if (event.code === 'KeyS') {
         camera.move(0, -1);
+        //camera.addposition.z+=.1;
       } else if (event.code === 'KeyA') {
         camera.move(1, 0);
+        //camera.addposition.x-=.1;
       } else if (event.code === 'KeyD') {
         camera.move(-1, 0);
+        //camera.addposition.x+=.1;
       }
     }
   });

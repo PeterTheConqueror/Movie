@@ -21,6 +21,9 @@ class ExtendedLightSGNode extends LightSGNode {
   }
 }
 
+/**
+* Class for Spotlights
+**/
 class SpotlightSGNode extends ExtendedLightSGNode {
 
   constructor(light, i, children) {
@@ -40,12 +43,15 @@ class SpotlightSGNode extends ExtendedLightSGNode {
   }
 }
 
+/**
+* Class for time-based rendering behaviour
+**/
 class TimeBasedTransformationSGNode extends TransformationSGNode{
   constructor(children){
     super(mat4.create(), children);
   }
 
-  // Instances of this class can overrider prerender to change their transformation matrix depending on time
+  // Instances of this class can overrider prerender to change their behaviour depending on time
   render(context){
     if(this.prerender){
       this.prerender(context);
@@ -54,6 +60,9 @@ class TimeBasedTransformationSGNode extends TransformationSGNode{
   }
 }
 
+/**
+* Convenience class for setting Materials
+**/
 class ExtendedMaterialSGNode extends MaterialSGNode {
 
   constructor(ambient, diffuse, specular, emission, shininess, children){
@@ -67,7 +76,7 @@ class ExtendedMaterialSGNode extends MaterialSGNode {
 }
 
 /**
-*
+* Class for Multitexturing (special effect)
 **/
 class MultiTextureSGNode extends SGNode {
   constructor(useSecond, alphaimage, alpharepeat, image1, repeat1, image2, repeat2, children) {
@@ -104,7 +113,7 @@ class MultiTextureSGNode extends SGNode {
       if (i == 0) {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.ALPHA, gl.ALPHA, gl.UNSIGNED_BYTE, this.images[i]);
       } else {
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.images[i]);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.images[i]);
       }
 
       gl.bindTexture(gl.TEXTURE_2D, null);
@@ -147,6 +156,9 @@ class MultiTextureSGNode extends SGNode {
   }
 }
 
+/**
+* Class for setting Int/Bool uniforms (does not work with SetUniformSGNode)
+**/
 class SetIntUniformSGNode extends SGNode {
   constructor(uniform, value, children){
     super(children);
@@ -160,6 +172,9 @@ class SetIntUniformSGNode extends SGNode {
   }
 }
 
+/**
+* Class for skyboxes
+**/
 class SkyboxSGNode extends SGNode {
 
   constructor(cubetexture, textureunit, children) {
@@ -187,6 +202,9 @@ class SkyboxSGNode extends SGNode {
   }
 }
 
+/**
+* Class for setting shift uniform
+**/
 class ShiftSGNode extends SGNode {
 
   constructor(children) {
@@ -200,6 +218,9 @@ class ShiftSGNode extends SGNode {
   }
 }
 
+/**
+* Class for transparent nodes (only allows rendernodes as children)
+**/
 class TransparentSGNode extends TransformationSGNode{
 
   constructor(matrix, color, child) {
@@ -214,6 +235,9 @@ class TransparentSGNode extends TransformationSGNode{
   }
 }
 
+/**
+* Class for ordering transparent nodes and rendering them in the correct order
+**/
 class TransparencySGNode extends ShaderSGNode {
 
   constructor(shader, opaqueNodes, transparentNodes) {
@@ -321,6 +345,7 @@ function initSceneCube(scene, textureunit) {
   return texture;
 }
 
+// Make color vector from a grey tone and an alpha value
 function createGreyTone(grey, alpha){
   return [grey, grey, grey, alpha];
 }
