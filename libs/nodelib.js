@@ -104,7 +104,7 @@ class MultiTextureSGNode extends SGNode {
       if (i == 0) {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.ALPHA, gl.ALPHA, gl.UNSIGNED_BYTE, this.images[i]);
       } else {
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.images[i]);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.images[i]);
       }
 
       gl.bindTexture(gl.TEXTURE_2D, null);

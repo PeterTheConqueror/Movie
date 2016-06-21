@@ -203,9 +203,8 @@ function setUpPlane(gl, resources) {
 
   plane.prerender = context => {
     plane.matrix = getPlaneMatrix(context);
-
-    //spotlight.position = mat4.getTranslation(vec3.create(), glm.transform({translate:[8*Math.sin(movement), 0, 8*Math.cos(movement)]}));
   };
+  //plane.append(sunlight);
 
   planeShader.append(new TransformationSGNode(glm.transform({ scale: 0.4, translate: [0, 1.5, 0]}), plane));
 
@@ -213,11 +212,11 @@ function setUpPlane(gl, resources) {
   // Materials for all propellers
   //---------------------------------------------------------------------------------------------------------------------------
 
-  propellerMaterials = new ExtendedMaterialSGNode([0,0,0,0], [0,0,0,0], [0,0,0,0], [0.8,0.8,0.8,1], 0.0);
+  propellerMaterials = new ExtendedMaterialSGNode([0,0,0,0], [0,0,0,0], [0,0,0,0], [0,0.2,0.8,1], 0.0);
 
-  coreMaterials = new ExtendedMaterialSGNode([0,0,0,0], [0,0,0,0], [0,0,0,0], [0.8,0.8,0.8,1], 0.0);
+  coreMaterials = new ExtendedMaterialSGNode([0,0,0,0], [0,0,0,0], [0,0,0,0], [0.5,0.1,0.1,1], 0.0);
 
-  wingMaterials = new ExtendedMaterialSGNode([0,0,0,0], [0,0,0,0], [0,0,0,0], [0.8,0.8,0.8,1], 0.0);
+  wingMaterials = new ExtendedMaterialSGNode([0,0,0,0], [0,0,0,0], [0,0,0,0], [0,0.2,0,1], 0.0);
 
   plane.append(propellerMaterials);
 
@@ -402,12 +401,12 @@ class CubeRenderSGNode extends SGNode {
     gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false,0,0) ;
     gl.enableVertexAttribArray(positionLocation);
 
-    var colorLocation = gl.getAttribLocation(context.shader, 'a_color');
-    gl.bindBuffer(gl.ARRAY_BUFFER, cubeColorBuffer);
-    gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false,0,0) ;
-    gl.enableVertexAttribArray(colorLocation);
-
-    gl.uniform1f(gl.getUniformLocation(context.shader, 'u_alpha'), 0.5);
+    // var colorLocation = gl.getAttribLocation(context.shader, 'a_color');
+    // gl.bindBuffer(gl.ARRAY_BUFFER, cubeColorBuffer);
+    // gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false,0,0) ;
+    // gl.enableVertexAttribArray(colorLocation);
+    //
+    // gl.uniform1f(gl.getUniformLocation(context.shader, 'u_alpha'), 0.5);
 
     /*
     gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false,0,0) ;
@@ -421,7 +420,7 @@ class CubeRenderSGNode extends SGNode {
     setTransformationUniforms(context);
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeIndexBuffer);
-    gl.drawElements(gl.TRIANGLES, cubeIndices.length, gl.UNSIGNED_SHORT, 0); //LINE_STRIP
+    //gl.drawElements(gl.TRIANGLES, cubeIndices.length, gl.UNSIGNED_SHORT, 0); //LINE_STRIP
 
     //render children
     super.render(context);
@@ -440,17 +439,17 @@ class PyramidRenderSGNode extends SGNode {
     gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false,0,0) ;
     gl.enableVertexAttribArray(positionLocation);
 
-    var colorLocation = gl.getAttribLocation(context.shader, 'a_color');
-    gl.bindBuffer(gl.ARRAY_BUFFER, pyramidColorBuffer);
-    gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false,0,0) ;
-    gl.enableVertexAttribArray(colorLocation);
+    // var colorLocation = gl.getAttribLocation(context.shader, 'a_color');
+    // gl.bindBuffer(gl.ARRAY_BUFFER, pyramidColorBuffer);
+    // gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false,0,0) ;
+    // gl.enableVertexAttribArray(colorLocation);
 
     gl.uniform1f(gl.getUniformLocation(context.shader, 'u_alpha'), 0.5);
 
     setTransformationUniforms(context);
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pyramidIndexBuffer);
-    gl.drawElements(gl.TRIANGLES, pyramidIndices.length, gl.UNSIGNED_SHORT, 0); //LINE_STRIP
+    //gl.drawElements(gl.TRIANGLES, pyramidIndices.length, gl.UNSIGNED_SHORT, 0); //LINE_STRIP
 
     //render children
     super.render(context);
@@ -468,10 +467,10 @@ class TriangularPrismRenderSGNode extends SGNode {
     gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false,0,0) ;
     gl.enableVertexAttribArray(positionLocation);
 
-    var colorLocation = gl.getAttribLocation(context.shader, 'a_color');
-    gl.bindBuffer(gl.ARRAY_BUFFER, triangularPrismColorBuffer);
-    gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false,0,0) ;
-    gl.enableVertexAttribArray(colorLocation);
+    // var colorLocation = gl.getAttribLocation(context.shader, 'a_color');
+    // gl.bindBuffer(gl.ARRAY_BUFFER, triangularPrismColorBuffer);
+    // gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false,0,0) ;
+    // gl.enableVertexAttribArray(colorLocation);
 
     gl.uniform1f(gl.getUniformLocation(context.shader, 'u_alpha'), 0.5);
 

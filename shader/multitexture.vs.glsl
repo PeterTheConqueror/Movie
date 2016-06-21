@@ -11,6 +11,12 @@ uniform mat4 u_modelView;
 uniform mat3 u_normalMatrix;
 uniform mat4 u_projection;
 
+uniform vec3 u_light0Pos;
+uniform vec3 u_light1Pos;
+
+varying vec3 v_light0Vec;
+varying vec3 v_light1Vec;
+
 varying vec2 v_texCoord1;
 varying vec2 v_texCoord2;
 varying vec2 v_alphatexCoord;
@@ -26,5 +32,10 @@ void main() {
 	v_texCoord2 = a_texCoord2;
 	v_alphatexCoord = a_alphatexCoord;
 
-	gl_Position = u_projection * u_modelView  * vec4(position, 1);
+  vec4 eyePosition = u_modelView * vec4(position, 1);
+
+  v_light0Vec = u_light0Pos - eyePosition.xyz;
+  v_light1Vec = u_light1Pos - eyePosition.xyz;
+
+	gl_Position = u_projection * eyePosition;
 }

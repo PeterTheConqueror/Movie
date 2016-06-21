@@ -24,7 +24,7 @@ uniform Light u_light0;
 uniform Light u_light1;
 uniform vec3 u_light0Pos;
 uniform vec3 u_light1Pos;
-uniform int u_lightNum;
+
 uniform float u_shift;
 
 uniform bool u_mirror;
@@ -56,9 +56,9 @@ vec4 calculateSimplePointLight(Light light, Material material, vec3 lightVec, ve
 	vec4 c_amb  = clamp(light.ambient * material.ambient, 0.0, 1.0);
 	vec4 c_diff = clamp(diffuse * light.diffuse * material.diffuse, 0.0, 1.0);
 	vec4 c_spec = clamp(spec * light.specular * material.specular, 0.0, 1.0);
-	vec4 c_em   = material.emission;
 
-	return c_amb + c_diff + c_spec + c_em;
+	// Do not return emission because it is already in gl_FragColor
+	return c_amb + c_diff + c_spec;
 }
 
 vec4 calculateLight(Light light, Material material, vec3 lightVec, vec3 normalVec, vec3 eyeVec, vec3 lightPos, vec3 position) {
@@ -77,14 +77,12 @@ vec4 calculateLight(Light light, Material material, vec3 lightVec, vec3 normalVe
 			vec4 c_amb  = clamp(light.ambient * material.ambient, 0.0, 1.0);
 			vec4 c_diff = clamp(diffuse * light.diffuse * material.diffuse, 0.0, 1.0);
 			vec4 c_spec = clamp(spec * light.specular * material.specular, 0.0, 1.0);
-			vec4 c_em   = material.emission;
 
-			return c_amb + c_diff + c_spec + c_em;
-			//return vec4(0,1,0,1);
+			// Do not return emission because it is already in gl_FragColor
+			return c_amb + c_diff + c_spec;
 		} else {
-			return material.emission;
+			return vec4(0,0,0,0);
 		}
-
 	}else{
 		return calculateSimplePointLight(light, material, lightVec, normalVec, eyeVec);
 	}
@@ -116,7 +114,7 @@ void main() {
 	mat.emission = vec4(0,0,0,0);
 	mat.shininess = 0.0;
 
-	gl_FragColor = vec4(0, 0, 0, color.a);
+	gl_FragColor = vec4(mat.emission.xyz, color.a);
 
 	if(u_light0.enabled){
 		gl_FragColor += vec4(calculateLight(u_light0, mat, v_light1Vec, v_normalVec, v_eyeVec, u_light0Pos, v_position).xyz, 0);
