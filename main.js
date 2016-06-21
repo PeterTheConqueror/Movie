@@ -10,17 +10,17 @@ const height = 48;
 
 var gl = null;
 
-var root = null;
 var scenes = null;
-var clouds = null;
-var lights = null;
 var planeroot = null;
+var sunlight = null;
+var spotlight = null;
 
-var plane;
-var propeller;
+const rise = 5000;
+const crash = 15000;
+const fall = 20000;
 
 function init(resources) {
-  gl = createContext();
+  gl = createContext(window.screen.availWidth * 0.99, window.screen.availHeight * 0.97);
 
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
@@ -41,7 +41,7 @@ function init(resources) {
 }
 
 function render(time) {
-  // checkForWindowResize(gl);
+  checkForWindowResize(gl);
 
   gl.clearColor(0, 0, 0, 1.0);
 
@@ -49,82 +49,60 @@ function render(time) {
 
   const context = createSGContext(gl);
 
-  context.projectionMatrix = mat4.perspective(mat4.create(), Math.PI * 30 /180, gl.drawingBufferWidth / gl.drawingBufferHeight, .1, 100);
-  var eye = vec3.add(vec3.create(), camera.baseposition, camera.addposition);
+  setScene(context, time);
+
+  context.projectionMatrix = mat4.perspective(mat4.create(), Math.PI * 30 /180,
+  (gl.canvas.width) / (gl.canvas.height),
+  .1, 100);
+  var eye = camera.getPosition();
   context.viewMatrix = mat4.lookAt(mat4.create(),
   eye, vec3.add(vec3.create(), eye, camera.getDirVec()), [0,1,0]);
   context.invViewMatrix = mat4.invert(mat4.create(), context.viewMatrix);
 
   context.sceneMatrix = mat4.identity(mat4.create());
 
-  calcScene(context, time);
-
-  root.render(context);
-
-  if(scenes[scene % scenes.length]){
-    scenes[scene % scenes.length].render(context);
+  if(scenes[scene]){
+    scenes[scene].render(context);
   }
 
   requestAnimationFrame(render);
 }
 
-function LIGHTNING(){
+function setScene(context, time) {
+  // Sets the time for all TimeBasedTransformationSGNodes,
+  // which can change their matrix according to this in the prerender function
+  context.time = time;
 
-  gl.drawArrays(gl.TRIANGLES, 0, 6);
-}
+  camera.moveCamera(time);
 
-function calcScene(context, time) {
-
-  context.shift = (time/6000);
-
-  clouds.matrix = glm.translate(context.shift, 0, 0);
-
-  movePlane(time);
-
-  var prevScene = scene;
-
-  //scene = 1;
-  //scene = Math.floor(time / 1000);
-  scene = Math.floor(time / 5000);
-  //scene = Math.floor(time / 10000);
-
-  // Reset Camera if scene changes
-  if(prevScene != scene)
-  {
-    camera.baseposition = vec3.fromValues(0,4,-25);
-  }
-  return scene;
+  scene = Math.floor(context.time / 10000);
 }
 
 function createSceneGraph(gl, resources) {
 
+  createLights(gl, resources);
+
   planeroot = setUpPlane(gl, resources);
 
-  lights = createLights(gl, resources);
-
   scenes = createScenes(gl, resources);
-
-  root = new TransformationSGNode(glm.transform({ translate:[0, 0, 0]}));
 }
 
 function createLights(gl, resources) {
 
-  const lights = [];
-
   // Sun
-  lights[0] = new Light([0, 45, 0], [0, 0, 0, 1], [1, 1, 1, 1], [1, 1, 1, 1]);
+  sunlight = new ExtendedLightSGNode(new Light([0, 45, 0], [0, 0, 0, 1], [1, 1, 1, 1], [1, 1, 1, 1]), 0);
 
-  // Spotlight attached to plane
-  lights[1] = new Light([0, 0, 0], [0, 0, 0, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, -1, 0], 30 * Math.PI / 180);
+  // Spotlight in front of plane
+  spotlight = new SpotlightSGNode(new Light([0, 12, 0], [0, 0, 0, 1], [0.7, 0.7, 0.7, 1], [0.6, 0.6, 0.6, 1], [1, -1, 0], 15 * Math.PI / 180),1);
 
-  // lights[2] = new Light([-4, 7, 4], [0, 0, 0, 1], [1, 1, 1, 1], [1, 1, 1, 1]);
-  // lights[3] = new Light([4, 7, 4], [0, 0, 0, 1], [1, 1, 1, 1], [1, 1, 1, 1]);
-
-  return lights;
+  // Set function so that spotlight moves correctly
+  spotlight.prerender = context => spotlight.position = [0, (50 - (context.time / 1000 - 20) * 5), 0 ];
 }
 
 function createClouds(gl, resources) {
-  clouds = new TransformationSGNode();
+  const clouds = new TimeBasedTransformationSGNode();
+
+  clouds.prerender = (context) => clouds.matrix = glm.translate(context.time/6000, 0, 0);
 
   // Cloud generation, supposed to look random but is actually completely deterministic
   for (var i = 0; i < 500; i++) {
@@ -139,7 +117,7 @@ function createClouds(gl, resources) {
     let sphere = makeSphere(0.5, 55, 55);
 
     //Add clouds
-    clouds.append(new TransparentSGNode(glm.transform({translate: pos, scale: 3}), createGreyTone(1-(i+500)/1000, .6), new RenderSGNode(sphere)));
+    clouds.append(new TransparentSGNode(glm.transform({translate: pos, scale: 3}), createGreyTone(1-i/1000, .4), new RenderSGNode(sphere)));
   }
 
   return clouds;
@@ -155,13 +133,13 @@ function createScenes(gl, resources){
   }
 
   {
-    let texUnit = 3;
-    let waterShader = createProgram(gl, resources.wt_vs, resources.wt_fs);
+    const texUnit = 3;
+    const waterShader = createProgram(gl, resources.wt_vs, resources.wt_fs);
 
     {
-      let scene = scenes[0];
+      const scene = scenes[0];
 
-      let skybox = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
+      const skybox = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
       new SkyboxSGNode(initSceneCube({
         env_r : resources.scene0_env_r,
         env_l : resources.scene0_env_l,
@@ -171,8 +149,8 @@ function createScenes(gl, resources){
         env_b : resources.scene0_env_b
       }, texUnit), texUnit, new RenderSGNode(makeSphere(48, 40, 90))));
 
-      let water = new MaterialSGNode(
-        new TriTextureSGNode(resources.water_b1, 32, resources.water_b2, 16, resources.alphamask, 32,
+      const water = new MaterialSGNode(
+        new MultiTextureSGNode(true, resources.alphamask, 32, resources.water_b1, 32, resources.water_b2, 16,
           new ShiftSGNode(new RenderSGNode({
             position: [-width, -height, 0,   width, -height, 0,   width, height, 0,   -width, height, 0],
             normal: [0, 0, -1,   0, 0, -1,   0, 0, -1,   0, 0, -1],
@@ -192,11 +170,11 @@ function createScenes(gl, resources){
     }
 
     {
-      let scene = new TransparencySGNode(waterShader
+      const scene = new TransparencySGNode(waterShader
         , planeroot
       );
 
-      let sceneCube = initSceneCube({
+      const sceneCube = initSceneCube({
         env_r : resources.scene1_env_r,
         env_l : resources.scene1_env_l,
         env_d : resources.scene1_env_d,
@@ -205,10 +183,30 @@ function createScenes(gl, resources){
         env_b : resources.scene1_env_b
       }, texUnit);
 
-      let skybox = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
+      const lightning = new SGNode(new MultiTextureSGNode(false, resources.lightning_alpha, 1, resources.lightning, 32, null, null,
+        new RenderSGNode({
+          position: [-width, -height, 0,   width, -height, 0,   width, height, 0,   -width, height, 0],
+          normal: [0, 0, -1,   0, 0, -1,   0, 0, -1,   0, 0, -1],
+          index: [0, 1, 2,   2, 3, 0]
+        })
+      ));
+
+      lightning.render = context => {
+        if(Math.abs(context.time-crash)<250){
+          lightning.children.forEach(c=>c.render(context));
+        }
+      };
+
+      const lightningShader = new ShaderSGNode(createProgram(gl, resources.mt_vs, resources.mt_fs), lightning);
+
+      const skybox = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
       new SkyboxSGNode(sceneCube, texUnit, new RenderSGNode(makeSphere(48, 40, 90))));
 
-      scene.append(new SkyboxSGNode(sceneCube, texUnit, new SetUniformSGNode('u_useCube', false, new ShiftSGNode(createClouds(gl, resources)))));
+      const shift = new ShiftSGNode(lightningShader);
+
+      shift.append(createClouds(gl, resources));
+
+      scene.append(new SkyboxSGNode(sceneCube, texUnit, new SetUniformSGNode('u_mirror', false, shift)));
       scene.appendOpaque(skybox);
 
       scenes[1] = scene;
@@ -229,23 +227,23 @@ function createScenes(gl, resources){
       let skybox = new ShaderSGNode(createProgram(gl, resources.sb_vs, resources.sb_fs),
       new SkyboxSGNode(sceneCube, texUnit, new RenderSGNode(makeSphere(48, 40, 90))));
 
-      let water = new ShaderSGNode(waterShader,
-        new SetUniformSGNode('u_useCube', true,
-        new MultiLightSGNode(lights,
-          new ShiftSGNode(
-            new TransformationSGNode(glm.transform({ rotateX: 90 }),
-            new SkyboxSGNode(sceneCube, texUnit, new RenderSGNode({
-              position: [-width, -height, 0,   width, -height, 0,   width, height, 0,   -width, height, 0],
-              normal: [0, 0, -1,   0, 0, -1,   0, 0, -1,    0, 0, -1],
-              index: [0, 1, 2,   2, 3, 0]
-            })))
-          )
-        ))
-      );
+      let water = new SetUniformSGNode('u_mirror', true);
+      let waterNode = new ShaderSGNode(waterShader, water);
+
+      water.append(sunlight);
+      water.append(spotlight);
+      water.append(new ShiftSGNode(
+        new TransformationSGNode(glm.transform({ rotateX: 90 }),
+        new SkyboxSGNode(sceneCube, texUnit, new RenderSGNode({
+          position: [-width, -height, 0,   width, -height, 0,   width, height, 0,   -width, height, 0],
+          normal: [0, 0, -1,   0, 0, -1,   0, 0, -1,    0, 0, -1],
+          index: [0, 1, 2,   2, 3, 0]
+        })))
+      ));
 
       scene.append(skybox);
 
-      scene.append(water);
+      scene.append(waterNode);
     }
   }
 
@@ -254,30 +252,20 @@ function createScenes(gl, resources){
 
 //load the shader resources using a utility function
 loadResources({
-  vs: 'shader/movie.vs.glsl',
-  fs: 'shader/movie.fs.glsl',
   mt_vs: 'shader/multitexture.vs.glsl',
   mt_fs: 'shader/multitexture.fs.glsl',
   sb_vs: 'shader/skybox.vs.glsl',
   sb_fs: 'shader/skybox.fs.glsl',
-  mod_vs: 'shader/model.vs.glsl',
-  mod_fs: 'shader/model.fs.glsl',
   wt_vs: 'shader/water.vs.glsl',
   wt_fs: 'shader/water.fs.glsl',
-  vs_single: 'shader/simple.vs.glsl',
-  fs_single: 'shader/simple.fs.glsl',
+  pl_vs: 'shader/plane.vs.glsl',
+  pl_fs: 'shader/plane.fs.glsl',
 
-  water_b: 'textures/water_black.jpg',
   water_b1: 'textures/water_bright_1.jpg',
   water_b2: 'textures/water_bright_2.jpg',
-  water_b3: 'textures/water_bright_3.jpg',
-  tex1: 'textures/tex1.jpg',
-  tex2: 'textures/tex2.jpg',
-  tex3: 'textures/tex3.jpg',
-  wave: 'textures/wave.jpg',
+  lightning: 'textures/lightning.png',
   alphamask: 'textures/alphamask.png',
-
-  plane: 'models/plane.obj',
+  lightning_alpha: 'textures/lightning_alpha.png',
 
   scene0_env_r: 'skybox/TropicalSunnyDayRight.png',
   scene0_env_l: 'skybox/TropicalSunnyDayLeft.png',
@@ -330,9 +318,7 @@ function initInteraction(canvas) {
     const pos = toPos(event);
     const delta = { pitch : mouse.pos.x - pos.x, yaw : mouse.pos.y - pos.y };
     if (mouse.leftButtonDown) {
-      //camera.rotate(delta);
-      camera.addrotation[0] = (camera.addrotation[0]  + delta.yaw/24)%360;
-      camera.addrotation[1] = (camera.addrotation[1]  - delta.pitch/24)%360;
+      camera.rotate(delta.pitch, delta.yaw);
     }
     mouse.pos = pos;
   });

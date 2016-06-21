@@ -42,7 +42,7 @@ var pyramidIndices =  new Float32Array([
 
 var pyramidNormals = new Float32Array([
   // Normal of Sides (easy to calculate because h == s)
-  Math.SQRT2/(1 + Math.SQRT2), 1/(1 + Math.SQRT2), 0,
+  // Math.SQRT2/(1 + Math.SQRT2), 1/(1 + Math.SQRT2), 0,
 
   -Math.SQRT1_2, -Math.SQRT1_2, 0,
   -Math.SQRT1_2, Math.SQRT1_2, 0,
@@ -163,25 +163,85 @@ var pyramidVertexBuffer, pyramidColorBuffer, pyramidIndexBuffer;
 var cubeVertexBuffer, cubeColorBuffer, cubeIndexBuffer;
 var triangularPrismVertexBuffer, triangularPrismColorBuffer, triangularPrismIndexBuffer;
 
+function getPlaneMatrix(context){
+    const movement = context.time / 1000;
+    const risetime = (context.time - rise)/1000;
+    var planeMatrix;
+    //animate based on elapsed time
+    planeMatrix = glm.transform({rotateY:-90, translate:[0, 0, -movement*5]});
+    if(context.time > rise && context.time <= crash){
+      planeMatrix = glm.transform({rotateY:-90, translate:[0, 0, -rise/1000*5]});
+      mat4.translate(planeMatrix, planeMatrix, [8*Math.sin(movement-Math.PI/2)*Math.log(risetime+1), 0, 8*Math.cos(movement-Math.PI/2)*Math.log(risetime+1)]);
+      mat4.rotateY(planeMatrix, planeMatrix, movement+Math.PI/2);
+      mat4.rotateX(planeMatrix, planeMatrix, 60*Math.PI/180);
+      mat4.translate(planeMatrix, planeMatrix, [0, (risetime)/3, 0]);
+    } else if(context.time > crash && context.time <= fall){
+      planeMatrix = glm.transform({rotateY:-90, translate:[0, 0, -rise/1000*5]});
+      mat4.translate(planeMatrix, planeMatrix, [8*Math.sin(movement-Math.PI/2)*Math.log(risetime+1), 0, 8*Math.cos(movement-Math.PI/2)*Math.log(risetime+1)]);
+      mat4.translate(planeMatrix, planeMatrix, [0, (risetime)/3, 0]);
+      mat4.rotateY(planeMatrix, planeMatrix, movement+Math.PI);
+      mat4.translate(planeMatrix, planeMatrix, [0, -(context.time - crash) /400, 0]);
+      mat4.rotateZ(planeMatrix, planeMatrix, 30 * Math.PI / 180);
+      mat4.rotateX(planeMatrix, planeMatrix, 3 * (context.time - crash) / 1000);
+    } else if(context.time > fall){
+      mat4.fromTranslation(planeMatrix, [0, (45 - (movement - 20) * 5), 0 ]);
+      mat4.rotateZ(planeMatrix, planeMatrix, Math.PI/2);
+      mat4.rotateX(planeMatrix, planeMatrix, movement * 10);
+    }
+    return planeMatrix;
+}
+
 function setUpPlane(gl, resources) {
   //initTexture();
   initpyramidBuffer();
   initCubeBuffer();
   initTriangularPrismBuffer();
 
-  const planeShader = new ShaderSGNode(createProgram(gl, resources.vs_single, resources.fs_single));
+  const planeShader = new ShaderSGNode(createProgram(gl, resources.pl_vs, resources.pl_fs));
 
-  plane = new TransformationSGNode();
+  plane = new TimeBasedTransformationSGNode();
+
+  plane.prerender = context => {
+    plane.matrix = getPlaneMatrix(context);
+
+    //spotlight.position = mat4.getTranslation(vec3.create(), glm.transform({translate:[8*Math.sin(movement), 0, 8*Math.cos(movement)]}));
+  };
 
   planeShader.append(new TransformationSGNode(glm.transform({ scale: 0.4, translate: [0, 1.5, 0]}), plane));
+
+  //---------------------------------------------------------------------------------------------------------------------------
+  // Materials for all propellers
+  //---------------------------------------------------------------------------------------------------------------------------
+
+  propellerMaterials = new ExtendedMaterialSGNode([0,0,0,0], [0,0,0,0], [0,0,0,0], [0.8,0.8,0.8,1], 0.0);
+
+  coreMaterials = new ExtendedMaterialSGNode([0,0,0,0], [0,0,0,0], [0,0,0,0], [0.8,0.8,0.8,1], 0.0);
+
+  wingMaterials = new ExtendedMaterialSGNode([0,0,0,0], [0,0,0,0], [0,0,0,0], [0.8,0.8,0.8,1], 0.0);
+
+  plane.append(propellerMaterials);
+
+  plane.append(coreMaterials);
+
+  plane.append(wingMaterials);
 
   //---------------------------------------------------------------------------------------------------------------------------
   // Transformation for all propellers
   //---------------------------------------------------------------------------------------------------------------------------
 
-  propeller = new TransformationSGNode();
+  propeller = new TimeBasedTransformationSGNode();
 
-  plane.append(new TransformationSGNode(glm.transform({ translate:  [-1.24, 0, 0], scale: 0.4 }),propeller));
+  propeller.prerender = function(context){
+      // Once plane crashes, propeller stops working
+      if(context.time <= crash){
+        //animate based on elapsed time
+        var animatedAngle = context.time / 10;
+        var propellerMatrix = mat4.multiply(mat4.create(), mat4.create(), glm.rotateX(12 * animatedAngle));
+        this.matrix = (propellerMatrix);
+      }
+  };
+
+  propellerMaterials.append(new TransformationSGNode(glm.transform({ translate:  [-1.24, 0, 0], scale: 0.4 }),propeller));
 
   //Transformation of 1st probeller wings
   var firstPropellerWingTransformationMatrix = glm.rotateX(0);
@@ -224,7 +284,7 @@ function setUpPlane(gl, resources) {
   //---------------------------------------------------------------------------------------------------------------------------
   var coreTransformationMatrix = mat4.multiply(mat4.create(), mat4.create(), glm.scale(3,1,1));
   var coreTransformationNode = new TransformationSGNode(coreTransformationMatrix);
-  plane.append(coreTransformationNode);
+  coreMaterials.append(coreTransformationNode);
 
   //  cubeNode = new CubeRenderSGNode();
   coreTransformationNode.append(new CubeRenderSGNode());
@@ -235,7 +295,7 @@ function setUpPlane(gl, resources) {
   var leftWingTransformationMatrix = mat4.multiply(mat4.create(), mat4.create(), glm.translate(0,0,-0.5));
   leftWingTransformationMatrix = mat4.multiply(mat4.create(), leftWingTransformationMatrix, glm.scale(1.3,0.2,2.5));
   var leftWingTransformationNode = new TransformationSGNode(leftWingTransformationMatrix);
-  plane.append(leftWingTransformationNode);
+  wingMaterials.append(leftWingTransformationNode);
 
   //  cubeNode = new CubeRenderSGNode();
   leftWingTransformationNode.append(new CubeRenderSGNode());
@@ -243,7 +303,7 @@ function setUpPlane(gl, resources) {
   var rightWingTransformationMatrix = mat4.multiply(mat4.create(), mat4.create(), glm.translate(0,0,0.5));
   rightWingTransformationMatrix = mat4.multiply(mat4.create(), rightWingTransformationMatrix, glm.scale(1.3,0.2,2.5));
   var rightWingTransformationNode = new TransformationSGNode(rightWingTransformationMatrix);
-  plane.append(rightWingTransformationNode);
+  wingMaterials.append(rightWingTransformationNode);
 
   //  cubeNode = new CubeRenderSGNode();
   rightWingTransformationNode.append(new CubeRenderSGNode());
@@ -252,7 +312,7 @@ function setUpPlane(gl, resources) {
   backWingTransformationMatrix = mat4.multiply(mat4.create(), backWingTransformationMatrix, glm.rotateY(180));
   backWingTransformationMatrix = mat4.multiply(mat4.create(), backWingTransformationMatrix, glm.scale(1.5,0.5,0.5));
   var backWingTransformationNode = new TransformationSGNode(backWingTransformationMatrix);
-  plane.append(backWingTransformationNode);
+  coreMaterials.append(backWingTransformationNode);
 
   //    triangularPrismNode = new TriangularPrismRenderSGNode();
   backWingTransformationNode.append(new TriangularPrismRenderSGNode());
@@ -262,7 +322,7 @@ function setUpPlane(gl, resources) {
   var cockpitTransformationMatrix = mat4.multiply(mat4.create(), mat4.create(), glm.translate(-0.2,0.5,0));
   cockpitTransformationMatrix = mat4.multiply(mat4.create(), cockpitTransformationMatrix, glm.scale(0.7,0.7,0.7));
   cockpitTransformationNode = new TransformationSGNode(cockpitTransformationMatrix);
-  plane.append(cockpitTransformationNode);
+  coreMaterials.append(cockpitTransformationNode);
 
   //  cubeNode = new CubeRenderSGNode();
   cockpitTransformationNode.append(new CubeRenderSGNode());
@@ -273,7 +333,7 @@ function setUpPlane(gl, resources) {
   frontTransformationMatrix = mat4.multiply(mat4.create(), frontTransformationMatrix, glm.translate(0,0.9,0));
   frontTransformationMatrix = mat4.multiply(mat4.create(), frontTransformationMatrix, glm.scale(0.6,0.6,0.6));
   var frontTransformationNode = new TransformationSGNode(frontTransformationMatrix);
-  plane.append(frontTransformationNode);
+  coreMaterials.append(frontTransformationNode);
 
   //  pyramidNode = new PyramidRenderSGNode();
   frontTransformationNode.append(new PyramidRenderSGNode());
@@ -459,20 +519,4 @@ function initTexture()
       handleLoadedTexture(metallTextur)
     }
     metallTextur.image.src = "metallTextur.jpg";
-}
-
-function movePlane(time){
-  var movement = time / 1000;
-  var animatedAngle = time / 10;
-
-  //animate based on elapsed time
-  var planeMatrix = glm.transform({translate:[8*Math.sin(movement), 0, 8*Math.cos(movement)]});
-  mat4.rotateY(planeMatrix, planeMatrix, movement+Math.PI);
-  mat4.multiply(planeMatrix, planeMatrix, glm.rotateX(3*animatedAngle));
-  //var planeMatrix =  glm.rotateX(3*animatedAngle);
-  plane.matrix = (planeMatrix);
-
-  //animate based on elapsed time
-  var propellerMatrix = mat4.multiply(mat4.create(), mat4.create(), glm.rotateX(12 * animatedAngle));
-  propeller.matrix = (propellerMatrix);
 }

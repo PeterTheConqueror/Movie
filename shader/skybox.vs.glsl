@@ -21,4 +21,6 @@ void main() {
 	v_normalVec = u_invView * u_normalMatrix * a_normal;
 
   gl_Position = u_projection * eyePosition;
+
+  //gl_Position.z = 0.0;
 }
